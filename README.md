@@ -1,4 +1,4 @@
-# PET Poison Guard
+# 이미지 기반 반려동물 위해 식품 식별 및 분석 - PET Poison Guard
 
 ## Introduction
 
@@ -8,20 +8,19 @@
 ## 기능
 
 - **유해 물질 데이터베이스**: 반려동물에게 위험한 물질에 대한 정보를 제공합니다.
-- **사용자 알림**: 사용자가 반려동물의 건강에 위협이 되는 물질을 섭취했을 때 알림을 보냅니다.
-- **커뮤니티 피드백**: 사용자들이 경험을 공유하고 서로 도움을 줄 수 있는 커뮤니티 기능을 제공합니다.
+- **이미지 기반 위해 식품 식별 및 분석**: 음식 이미지를 기반으로 반려동물에게 위험한 식품인지 식별하고, 왜 위험한지 분석합니다.
 
 ## 기술 스택
 
-- **프레임워크**: FastAPI
+- **프론트엔드**: Flutter
+- **백엔드**: FastAPI
 - **데이터베이스**: SQLAlchemy
-- **프론트엔드**: React (예정)
 
 ## 설치 방법
 
 1. 이 저장소를 클론합니다.
    ```bash
-   git clone https://github.com/yourusername/pet-poison-guard.git
+   git clone https://github.com/ShinYoung-hwan/pet-poison-guard.git
    ```
 2. 필요한 패키지를 설치합니다.
    ```bash
@@ -47,9 +46,7 @@
 
 ## 라이센스
 
-이 프로젝트는 MIT 라이센스 하에 배포됩니다.
-
 ## 연락처
 
-- 이메일: shinefilm1@naver.com
-- GitHub: [yourusername](https://github.com/yourusername)
+- 이메일: shinefilm1@gmail.com
+- GitHub: [Young-Hwan Shin](https://github.com/ShinYoung-hwan)
