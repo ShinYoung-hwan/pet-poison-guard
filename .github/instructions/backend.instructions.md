@@ -17,6 +17,7 @@ This backend is a RESTful API service responsible for:
 - Use async functions for I/O-bound operations.
 - Write modular, testable code with clear separation of concerns.
 - Log requests and errors for debugging and monitoring.
+- use ppg_backend/.venv for virtual environment management
 
 ## API Endpoints
 - `/analyze` (POST): Accepts an image file, returns food safety analysis.
