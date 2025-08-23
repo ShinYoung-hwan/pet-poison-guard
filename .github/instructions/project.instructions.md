@@ -14,7 +14,7 @@ This document provides context and coding guidelines for the Pet Poison Guard pr
 ```
 
 ## Core Components
-- **Frontend**: Flutter-based cross-platform application for user interaction
+- **Frontend**: React-based Mobile-UI Web Service for user interaction
 - **Backend**: RESTful API for processing images and returning results
 - **AI Server**: Machine learning model for food safety analysis by image
 

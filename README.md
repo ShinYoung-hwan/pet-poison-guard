@@ -17,7 +17,7 @@ graph TD
     end
 
     subgraph "서비스 인프라 (로컬 환경)"
-        Frontend["📱 Flutter<br>크로스플랫폼 앱"]
+        Frontend["📱 React<br>모바일 UI 웹"]
         Backend["⚙️ FastAPI<br>백엔드 서버"]
         TaskQueue["📨 비동기 작업 큐<br>"]
         AIServer["🤖 PyTorch<br>AI 서버 (멀티모달 전용)"]
@@ -82,7 +82,7 @@ graph TD
 
 ## 기술 스택
 
-- **프론트엔드**: Flutter
+- **프론트엔드**: React
 - **백엔드**: FastAPI
 - **데이터베이스**: SQLAlchemy
 
