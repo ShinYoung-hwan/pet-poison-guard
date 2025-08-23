@@ -7,7 +7,7 @@ interface UsePollingProps {
   intervalMs?: number;
 }
 
-const usePolling = ({ taskId, onCompleted, intervalMs = 2000 }: UsePollingProps) => {
+const usePolling = ({ taskId, onCompleted, intervalMs = 1000 }: UsePollingProps) => {
   useEffect(() => {
     if (!taskId) return;
     let timer: ReturnType<typeof setTimeout>;
@@ -31,7 +31,7 @@ const usePolling = ({ taskId, onCompleted, intervalMs = 2000 }: UsePollingProps)
       stopped = true;
       if (timer) clearTimeout(timer);
     };
-  }, [taskId, onCompleted, intervalMs]);
+  }, [taskId, intervalMs]);
 };
 
 export default usePolling;

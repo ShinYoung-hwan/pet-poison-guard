@@ -1,12 +1,12 @@
 import axios from 'axios';
 
-const API_BASE_URL = '/api'; // TODO: 실제 백엔드 주소로 변경 필요
 
+const API_BASE_URL = '/api';
 
 const api = {
   uploadImage: async (file: File) => {
     const formData = new FormData();
-    formData.append('image', file);
+    formData.append('file', file); // FastAPI expects 'file', in reality, it's image
     try {
       const response = await axios.post(`${API_BASE_URL}/analyze`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
