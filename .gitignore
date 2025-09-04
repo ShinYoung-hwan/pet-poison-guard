@@ -4,6 +4,7 @@
 **/.pytest_cache
 *.tar
 *.pkl
+ppg_backend/app/services/snapshots/layer*.json
 
 # Logs
 logs

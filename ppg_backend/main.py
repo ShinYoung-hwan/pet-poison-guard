@@ -4,8 +4,18 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.logger import logger
 from app.api import analyze, health
+from contextlib import asynccontextmanager
 
 logging.basicConfig(level=logging.INFO)
+
+# --- Startup event ---
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    from app.services.ai_service import load_globals
+    # Load global resources
+    load_globals()
+    yield
+    # Cleanup if needed
 
 app = FastAPI(
     title="Pet Poison Guard Backend API",
@@ -13,6 +23,7 @@ app = FastAPI(
     version="1.0.0",
     docs_url="/docs",
     redoc_url="/redoc",
+    lifespan=lifespan
 )
 
 # --- Register Routers ---

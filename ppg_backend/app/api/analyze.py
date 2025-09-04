@@ -1,7 +1,5 @@
-import logging
 from fastapi import APIRouter, UploadFile, File, HTTPException, BackgroundTasks
 from fastapi.logger import logger
-from app.schemas.analyze import AnalyzeResult
 from app.schemas.task import TaskCreateResponse, TaskStatusResponse, TaskStatus
 from app.services.ai_service import request_ai_analysis
 from app.services.task_service import create_task, set_task_completed, set_task_failed, get_task
