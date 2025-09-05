@@ -4,7 +4,9 @@
 **/.pytest_cache
 *.tar
 *.pkl
-ppg_backend/app/services/snapshots/layer*.json
+ppg_backend/app/services/snapshots/
+!ppg_backend/app/services/snapshots/*.py
+!ppg_backend/app/services/snapshots/config.json
 
 # Logs
 logs

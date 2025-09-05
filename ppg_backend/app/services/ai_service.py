@@ -1,6 +1,7 @@
 import os
 import asyncio
 from .snapshots.utils import load_config_as_namespace
+from typing import List, Dict, Any
 
 # Global variables for data and model
 # TODO: global variables should be managed better, e.g., using database or cache
@@ -14,7 +15,10 @@ opts = load_config_as_namespace()
 # Global variable for recipe data
 recipe_data_by_id = None
 
-is_globals_loaded = lambda : all(v is not None for v in [model, rec_embeds, rec_ids, opts, recipe_data_by_id])
+# Global Variable for pet poison datas
+pet_poisons: List[Dict] = None
+
+is_globals_loaded = lambda : all(v is not None for v in [model, rec_embeds, rec_ids, device, opts, recipe_data_by_id, pet_poisons])
 
 import torch
 import torch.nn as nn
@@ -29,7 +33,7 @@ import json
 from .snapshots.trijoint import im2recipe
 
 def load_globals():
-    global model, rec_embeds, rec_ids, opts, device, recipe_data_by_id
+    global model, rec_embeds, rec_ids, opts, device, recipe_data_by_id, pet_poisons
     if is_globals_loaded():
         logging.info("Globals already loaded.")
         return
@@ -70,6 +74,21 @@ def load_globals():
     recipe_data_by_id = {entry['id']: entry for entry in recipes}
     elapsed = time.time() - t0
     logging.info(f"Loaded {len(recipe_data_by_id)} recipes into memory. (elapsed: {elapsed:.2f}s)")
+    # Load pet poison data
+    logging.info(f"Loading pet poison data from {opts.pet_poison_path} ...")
+    t0 = time.time()
+    with open(opts.pet_poison_path, 'r') as f:
+        pet_poisons = json.load(f)
+    for entry in pet_poisons:
+        entry['name'] = entry['name'].lower()
+        if 'alternate_names' in entry:
+            if entry['alternate_names'] is None:
+                entry['alternate_names'] = []
+            else:
+                entry['alternate_names'] = [name.lower() for name in entry['alternate_names'] if name]
+    elapsed = time.time() - t0
+    logging.info(f"Loaded {len(pet_poisons)} pet poison items into memory. (elapsed: {elapsed:.2f}s)")
+    logging.info("All globals loaded.")
 
 def image_to_embedding(image_path):
     normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
@@ -116,24 +135,24 @@ async def request_ai_analysis(file: tuple, timeout: float = 15.0, top_k: int = 1
         # Find top-k recipes
         topk = find_top_k_recipes(query_emb, top_k=top_k)        
 
-    # Prepare results with recipe data
-    results = []
+    # Collect all matched poison names from top-k recipes
+    poison_names = set()
     for rid, score in topk:
         recipe_data = recipe_data_by_id.get(rid, None)
-        recipe = {
-            "title": recipe_data.get("title", "Unknown"),
-            "ingredients": recipe_data.get("ingredients", []),
-            "instructions": recipe_data.get("instructions", ""),
-        }
+        if not recipe_data:
+            continue
+        ingredients = recipe_data.get("ingredients", [])
+        ingredients_lower = ', '.join([ ingredient['text'] for ingredient in ingredients ]).lower()
+        print(ingredients_lower)
+        # check poison name vs ingredient names
+        for entry in pet_poisons:
+            if entry["name"] in ingredients_lower:
+                poison_names.add(entry["name"])
+            if 'alternate_names' in entry and entry['alternate_names']:
+                for alt_name in entry['alternate_names']:
+                    if alt_name in ingredients_lower:
+                        poison_names.add(alt_name)
 
-        results.append({
-            "recipe_id": rid,
-            "score": score,
-            "recipe": recipe
-        })
-
-    # TODO: analyze the results to determine food safety
-
-    # Return as dict
-    return {"results": results}
+    # Return as dict in requested format
+    return {"result": list(poison_names)}
 
