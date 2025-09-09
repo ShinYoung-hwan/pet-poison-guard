@@ -1,22 +1,33 @@
 import os
 import asyncio
 from .snapshots.utils import load_config_as_namespace
-from typing import List, Dict, Any
+
+import numpy as np
+import torch
+from typing import List, Dict, Any, Union
+from torch import nn
 
 # Global variables for data and model
 # TODO: global variables should be managed better, e.g., using database or cache
 semaphore = asyncio.Semaphore(1)  # only one request at a time
-model = None
-rec_embeds = None
-rec_ids = None
-device = None
 opts = load_config_as_namespace()
+model: Union[nn.Module, None] = None
+device: Union[torch.device, None] = None
+
+""" structure:
+"""
+rec_embeds: Union[np.ndarray, None] = None
+rec_ids: Union[List[str], None] = None
 
 # Global variable for recipe data
-recipe_data_by_id = None
+""" structure:
+"""
+recipe_data_by_id: Union[Dict[str, Any], None] = None
 
 # Global Variable for pet poison datas
-pet_poisons: List[Dict] = None
+""" structure:
+"""
+pet_poisons: Union[List[Dict], None] = None
 
 is_globals_loaded = lambda : all(v is not None for v in [model, rec_embeds, rec_ids, device, opts, recipe_data_by_id, pet_poisons])
 
@@ -34,9 +45,13 @@ from .snapshots.trijoint import im2recipe
 
 def load_globals():
     global model, rec_embeds, rec_ids, opts, device, recipe_data_by_id, pet_poisons
+    
+    # If already loaded, skip
     if is_globals_loaded():
         logging.info("Globals already loaded.")
         return
+    
+    # CUDA device setting
     logging.info("Parsing arguments and loading model configuration...")
     torch.manual_seed(opts.seed)
     np.random.seed(opts.seed)
@@ -45,6 +60,8 @@ def load_globals():
     else:
         torch.cuda.manual_seed(opts.seed)
         device = torch.device(*('cuda',0))
+    
+    # Load model
     logging.info(f"Loading model to {device}...")
     model = im2recipe()
     model.visionMLP = torch.nn.DataParallel(model.visionMLP)
@@ -58,7 +75,8 @@ def load_globals():
     model.load_state_dict(checkpoint['state_dict'], strict=False)
     model.eval()
     logging.info(f"Model loaded. (elapsed: {time.time()-t0:.2f}s)")
-    # Load embeddings and ids
+
+    # Load recipe embeddings and ids
     logging.info("Loading image and recipe embeddings...")
     t0 = time.time()
     with open(os.path.join(opts.path_results, 'rec_embeds.pkl'), 'rb') as f:
@@ -66,6 +84,7 @@ def load_globals():
     with open(os.path.join(opts.path_results, 'rec_ids.pkl'), 'rb') as f:
         rec_ids = pickle.load(f)
     logging.info(f"Embeddings loaded. (elapsed: {time.time()-t0:.2f}s)")
+
     # Load recipe data
     logging.info(f"Loading recipe data from {opts.recipe_path} ...")
     t0 = time.time()
@@ -74,6 +93,7 @@ def load_globals():
     recipe_data_by_id = {entry['id']: entry for entry in recipes}
     elapsed = time.time() - t0
     logging.info(f"Loaded {len(recipe_data_by_id)} recipes into memory. (elapsed: {elapsed:.2f}s)")
+
     # Load pet poison data
     logging.info(f"Loading pet poison data from {opts.pet_poison_path} ...")
     t0 = time.time()
@@ -121,38 +141,54 @@ async def request_ai_analysis(file: tuple, timeout: float = 15.0, top_k: int = 1
     # TODO: top_k를 client로부터 입력받기
     """
     file: tuple (filename, fileobj, content_type)
-    Returns: dict with top_k recipe ids and scores
+    Returns: list of dicts [{"name": ..., "image": ..., "description": ...}], sorted by similarity descending
     """
     global model, rec_embeds, rec_ids, opts, device
     async with semaphore:
-        # Save uploaded file to a temporary file
+        # Save uploaded file to a temporary location
         filename, fileobj, content_type = file
         with tempfile.NamedTemporaryFile(delete=True, suffix=os.path.splitext(filename)[-1]) as tmp:
             tmp.write(fileobj)
             tmp.flush()
-            # Compute embedding
             query_emb = image_to_embedding(tmp.name)
-        # Find top-k recipes
-        topk = find_top_k_recipes(query_emb, top_k=top_k)        
+        topk = find_top_k_recipes(query_emb, top_k=top_k)
 
-    # Collect all matched poison names from top-k recipes
-    poison_names = set()
+    # Prepare result list
+    result = []
     for rid, score in topk:
         recipe_data = recipe_data_by_id.get(rid, None)
         if not recipe_data:
             continue
         ingredients = recipe_data.get("ingredients", [])
-        ingredients_lower = ', '.join([ ingredient['text'] for ingredient in ingredients ]).lower()
-        print(ingredients_lower)
-        # check poison name vs ingredient names
+        ingredients_lower = ', '.join([ingredient['text'] for ingredient in ingredients]).lower()
+        matched_poison = None
         for entry in pet_poisons:
             if entry["name"] in ingredients_lower:
-                poison_names.add(entry["name"])
+                matched_poison = entry["name"]
+                break
             if 'alternate_names' in entry and entry['alternate_names']:
                 for alt_name in entry['alternate_names']:
                     if alt_name in ingredients_lower:
-                        poison_names.add(alt_name)
+                        matched_poison = entry["name"]
+                        break
+            if matched_poison:
+                break
+        if matched_poison:
+            # Find poison entry for details
+            poison_entry = next((e for e in pet_poisons if e["name"] == matched_poison or ("alternate_names" in e and matched_poison in e["alternate_names"])), None)
+            result.append({
+                "name": matched_poison,
+                "image": poison_entry.get("desktop_thumb", "") if poison_entry else "",
+                "description": poison_entry.get("poison_description", "") if poison_entry else ""
+            })
 
-    # Return as dict in requested format
-    return {"result": list(poison_names)}
+    # Remove duplicates by name, keep first occurrence (highest similarity)
+    seen = set()
+    deduped_result = []
+    for item in result:
+        if item["name"] not in seen:
+            deduped_result.append(item)
+            seen.add(item["name"])
+
+    return deduped_result
 

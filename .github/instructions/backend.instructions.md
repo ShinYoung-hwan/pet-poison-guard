@@ -1,5 +1,5 @@
 ---
-applyTo: '**/ppg_backend'
+applyTo: 'ppg_backend/**'
 ---
 # Pet Poison Guard Backend - Copilot Instructions
 

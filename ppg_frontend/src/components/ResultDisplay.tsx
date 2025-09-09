@@ -1,20 +1,17 @@
 import React from 'react';
-import { Box, Typography, Paper } from '@mui/material';
+import PoisonResultList, { type PoisonResult } from './PoisonResultList';
 
 interface ResultDisplayProps {
-  result: any;
+  result: PoisonResult[] | null;
 }
 
 const ResultDisplay: React.FC<ResultDisplayProps> = ({ result }) => {
-  if (!result) return null;
-  // TODO: Customize result rendering based on actual API response structure
+  if (!result || result.length === 0) return null;
   return (
-    <Paper elevation={3} sx={{ p: 2 }}>
-      <Typography variant="h6">분석 결과</Typography>
-      <Box mt={1}>
-        <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>{JSON.stringify(result, null, 2)}</pre>
-      </Box>
-    </Paper>
+    <div style={{ marginTop: 16 }}>
+      <h3>분석 결과</h3>
+      <PoisonResultList results={result} />
+    </div>
   );
 };
 

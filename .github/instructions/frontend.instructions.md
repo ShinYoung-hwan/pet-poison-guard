@@ -1,5 +1,5 @@
 ---
-applyTo: '**/ppg_frontend'
+applyTo: 'ppg_frontend/**'
 ---
 
 # Pet Poison Guard Frontend - Copilot Instructions
@@ -24,4 +24,42 @@ Pet Poison Guard의 프론트엔드는 React 및 TypeScript 기반의 모바일 
 - API 통신 시 예외 처리를 반드시 구현합니다.
 - 코드에 주석을 적절히 추가하여 가독성을 높입니다.
 
-## 예시 폴더 구조
+## 실제 폴더 구조 (2025년 9월 기준)
+```
+ppg_frontend/
+	eslint.config.js
+	index.html
+	package.json
+	README.md
+	tsconfig.app.json
+	tsconfig.json
+	tsconfig.node.json
+	vite.config.ts
+	public/
+	src/
+		App.css
+		App.tsx
+		index.css
+		main.tsx
+		vite-env.d.ts
+		assets/
+			ppg.png
+		components/
+			Header.tsx
+			ImageUpload.tsx
+			PoisonResultList.tsx
+			ResultDisplay.tsx
+		locales/
+			en.json
+			ko.json
+		models/
+			AnalysisResult.ts
+		pages/
+			DescriptionPage.tsx
+			HomePage.tsx
+			IntroPage.tsx
+			UploadPage.tsx
+		services/
+			api.ts
+			usePolling.ts
+```
