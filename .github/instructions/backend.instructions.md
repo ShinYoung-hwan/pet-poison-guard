@@ -32,6 +32,36 @@ This backend is a RESTful API service responsible for:
 - Include unit and integration tests for all endpoints.
 - Use mock AI server responses for backend tests.
 
+### API Endpoint Test Writing Principles
+
+When writing test code for web backend API endpoints, follow these principles:
+
+#### 1. Independence
+- Each test must run independently. The result of one test should not affect others. Use setup/teardown or mocks to isolate external dependencies.
+
+#### 2. Reproducibility
+- Tests should always produce the same result regardless of when or where they are run. Avoid reliance on time, randomness, or external APIs.
+
+#### 3. Isolation
+- Tests should focus on specific system parts. For example, when testing the analysis API, mock the AI server and focus on the backend logic only.
+
+#### 4. Coverage
+- Cover as many scenarios as possible:
+	- Success cases: Valid requests and expected responses.
+	- Failure cases: Invalid input, permission errors, non-existent resources, etc.
+	- Edge cases: Boundary values, minimum/maximum lengths, zero/negative values.
+
+#### 5. Clarity
+- Test code should be easy to understand. Clearly state the test's purpose, input, and expected result. Use descriptive function names (e.g., `test_analyze_image_invalid_type`).
+
+#### Example Structure
+- Use the given/when/then pattern:
+	- Given: Set up initial state (e.g., define input data)
+	- When: Call the API endpoint
+	- Then: Assert the expected result
+
+Following these principles ensures robust, maintainable, and clear test code for backend API endpoints.
+
 ## Dependencies
 - List all dependencies in `requirements.txt`.
 - Pin versions for reproducibility.

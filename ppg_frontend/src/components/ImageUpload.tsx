@@ -5,7 +5,6 @@ import api from '../services/api';
 
 interface ImageUploadProps {
   onTaskId: (taskId: string) => void;
-  
 }
 
 const ImageUpload: React.FC<ImageUploadProps> = ({ onTaskId }) => {

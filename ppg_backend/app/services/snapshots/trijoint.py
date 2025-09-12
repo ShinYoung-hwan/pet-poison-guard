@@ -25,7 +25,7 @@ class im2recipe(nn.Module):
             )
             
             self.recipe_embedding = nn.Sequential(
-                nn.Linear(opts.irnnDim*2 + opts.srnnDim, opts.embDim, opts.embDim),
+                nn.Linear(opts.irnnDim*2 + opts.srnnDim, opts.embDim),
                 nn.Tanh(),
             )
 
