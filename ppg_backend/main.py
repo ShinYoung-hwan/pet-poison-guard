@@ -10,9 +10,9 @@ logging.basicConfig(level=logging.INFO)
 # --- Startup event ---
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    from app.services.ai_service import load_globals
+    from app.services.ai_service import load_model
     # Load global resources
-    load_globals()
+    load_model()
     yield
     # Cleanup if needed
 

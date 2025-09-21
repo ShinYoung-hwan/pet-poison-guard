@@ -1,8 +1,10 @@
-from fastapi import APIRouter, UploadFile, File, HTTPException, BackgroundTasks
+from fastapi import APIRouter, UploadFile, File, HTTPException, BackgroundTasks, Depends
 from fastapi.logger import logger
+from sqlalchemy.orm import Session
 from app.schemas.task import TaskCreateResponse, TaskStatusResponse, TaskStatus
 from app.services.ai_service import request_ai_analysis
 from app.services.task_service import create_task, set_task_completed, set_task_failed, get_task
+from ..models.db_session import get_db
 
 MAX_FILE_SIZE = 5 * 1024 * 1024  # 5MB
 
@@ -11,16 +13,16 @@ router = APIRouter(
 )
 
 def validate_image_file(file: UploadFile, contents: bytes):
-    if not file.content_type.startswith("image/"):
+    if not file.content_type or not file.content_type.startswith("image/"):
         logger.warning(f"Invalid file type: {file.content_type}")
         raise HTTPException(status_code=400, detail="Only image files are allowed.")
     if len(contents) > MAX_FILE_SIZE:
         logger.warning(f"File too large: {len(contents)} bytes")
         raise HTTPException(status_code=413, detail="File too large. Max 5MB allowed.")
 
-async def run_analysis_task(task_id: str, file_tuple):
+async def run_analysis_task(db: Session, task_id: str, file_tuple):
     try:
-        ai_result = await request_ai_analysis(file_tuple)
+        ai_result = await request_ai_analysis(db, file_tuple)
         set_task_completed(task_id, ai_result)
         logger.info(f"AI analysis complete for {task_id}")
     except Exception as e:
@@ -39,11 +41,11 @@ async def run_analysis_task(task_id: str, file_tuple):
         500: {"description": "Internal server error."}
     }
 )
-async def analyze_image(background_tasks: BackgroundTasks, file: UploadFile = File(...)):
+async def analyze_image(background_tasks: BackgroundTasks, file: UploadFile = File(...), db: Session = Depends(get_db)):
     contents = await file.read()
     validate_image_file(file, contents)
     task_id = create_task()
-    background_tasks.add_task(run_analysis_task, task_id, (file.filename, contents, file.content_type))
+    background_tasks.add_task(run_analysis_task, db, task_id, (file.filename, contents, file.content_type))
     return {"taskId": task_id}
 
 @router.get(
