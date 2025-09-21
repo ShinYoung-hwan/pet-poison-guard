@@ -8,7 +8,11 @@ ppg_backend/app/services/snapshots/
 !ppg_backend/app/services/snapshots/*.py
 !ppg_backend/app/services/snapshots/config.json
 
-# Logs
+# Database
+ppg_database/*.json
+ppg_database/*.pkl
+
+# Frontend Logs
 logs
 *.log
 npm-debug.log*
