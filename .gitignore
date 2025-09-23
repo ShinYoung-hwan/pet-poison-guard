@@ -10,6 +10,7 @@ ppg_backend/app/services/snapshots/
 
 # Database
 ppg_database/data/
+ppg_database/db_data/
 ppg_database/.gitignore
 
 # Frontend Logs

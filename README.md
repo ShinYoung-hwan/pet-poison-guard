@@ -2,15 +2,13 @@
 
 ## 목차 (Table of Contents) 📜
 
-- [프로젝트 소개](#3-프로젝트-소개-project-description-🚀)
-- [주요 기능](#4-주요-기능-key-features-✨)
-- [설치 방법](#5-설치-방법-installation-guide-⚙️)
-- [사용 방법](#6-사용-방법-how-to-use-🛠️)
-- [지원 및 문의](#7-지원-및-문의-support-and-contact-🤝)
+- [프로젝트 소개](#1-프로젝트-소개-project-description-🚀)
+- [주요 기능](#2-주요-기능-key-features-✨)
+- [설치 방법](#3-설치-방법-installation-guide-⚙️)
+- [사용 방법](#4-사용-방법-how-to-use-🛠️)
+- [지원 및 문의](#5-지원-및-문의-support-and-contact-🤝)
 - [기여 방법](#기여-방법)
 - [기술 스택](#기술-스택)
-- [라이센스](#라이센스)
-
 
 ## 1. 프로젝트 소개 (Project Description) 🚀
 
@@ -37,42 +35,46 @@ Pet Poison Guard는 반려동물에게 위험할 수 있는 음식 이미지를 
 git clone https://github.com/ShinYoung-hwan/pet-poison-guard.git
 ```
 
-### 2. 백엔드 패키지 설치
-```sh
-cd pet-poison-guard/ppg_backend
-pip install -r requirements.txt
-```
-
-### 3. 프론트엔드 패키지 설치
-```sh
-cd ../ppg_frontend
-npm install
-```
-
-### 4. 데이터베이스 및 모델 파일 준비
+### 2. 데이터베이스 및 모델 파일 준비
 <!-- TODO: Refactor to use DBMS! -->
-- AI 모델 및 데이터 파일은 `ppg_backend/app/services/snapshots/`에 위치해야 합니다.
-- 필요시 데이터베이스 초기화 명령어를 실행하세요.
+- AI 모델은 [`ppg_backend/app/services/snapshots/`](ppg_backend/app/services/snapshots/)에 위치해야 합니다. 또한, [`ppg_backend/app/services/snapshots/config.json`](ppg_backend/app/services/snapshots/config.json) 파일의 `model_path`를 업데이트해줍니다.
+- DB 데이터 파일은 [`ppg_database/data`](ppg_database/data) 디렉토리에 위치시킵니다. 데이터는 [im2recipe-Pytorch](https://github.com/torralba-lab/im2recipe-Pytorch)에서 다운로드 url을 신청할 수 있습니다.
+- Pet poison 데이터는 직접 제작해야 하며, 아래 구조를 참고하세요:
+```json
+[
+    {
+        "id": SERIAL PRIMARY KEY,
+        "name": TEXT,
+        "alternate_names": TEXT[],
+        "poison_description": TEXT,
+        "desktop_thumb": TEXT
+    },
+    ...
+]
+```
+
+### 3. Docker Compose
+
+```sh
+docker compose up
+```
+- 최초 실행 시 데이터 적재 시간이 필요합니다.
+- 컨테이너 로그로 진행 상황을 확인할 수 있습니다:
+```sh
+docker logs ppg_database
+```
 
 -----
 ## 4. 사용 방법 (How to Use) 🛠️
 
 ### 1. 서버 실행
 ```sh
-# 백엔드 실행
-cd ppg_backend
-source .venv/bin/activate
-uvicorn main:app --reload
-
-# 프론트엔드 실행
-cd ../ppg_frontend
-npm run dev
+docker compose up
 ```
 
 ### 2. 웹 브라우저 접속
-<!-- TODO: UPDATE URL! -->
-- 프론트엔드: [http://localhost:5173](http://localhost:5173)
-- 백엔드 API: [http://localhost:8000](http://localhost:8000)
+- 프론트엔드: [http://localhost:8080](http://localhost:8080)
+- 백엔드 API: [http://localhost:8000/docs](http://localhost:8000/docs)
 
 ### 3. 이미지 업로드 및 분석
 1. 웹에서 '이미지 업로드' 버튼 클릭
@@ -84,7 +86,7 @@ npm run dev
 
 - **이메일:** shinefilm1@gmail.com
 - **GitHub Issue:** [프로젝트 이슈 페이지](https://github.com/ShinYoung-hwan/pet-poison-guard/issues)
-- **공식 홈페이지:** 준비 중
+<!-- - **공식 홈페이지:** 준비 중 -->
 
 -----
 
@@ -98,14 +100,7 @@ npm run dev
 - **프론트엔드:** React, TypeScript, Vite, Material-UI
 - **백엔드:** FastAPI, Python, Pydantic
 - **AI 서버:** PyTorch 기반 이미지 분석 모델
-- **데이터베이스:** (추후 확장 가능)
-
-<!-- 
-TODO: Update License
-## 라이센스
-
-- 
- -->
+- **데이터베이스:** PostgreSQL 17 + pgvector
 
 -----
 
