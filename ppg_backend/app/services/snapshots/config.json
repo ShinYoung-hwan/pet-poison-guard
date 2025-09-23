@@ -1,11 +1,7 @@
 {
     "TODO": "clear unnecessary options",
     "seed": 1234, 
-    "no_cuda": false, 
-    "img_path": "data/images/", 
-    "data_path": "data/", 
-    "workers": 30, 
-    "batch_size": 160, 
+    "model_path": "~/pet-poison-guard/ppg_backend/app/services/snapshots/model_e220_v-4.700.pth.tar",
     "snapshots": "snapshots/", 
     "embDim": 1024, 
     "nRNNs": 1, 
@@ -32,10 +28,6 @@
     "cos_weight": 0.98, 
     "cls_weight": 0.01, 
     "resume": "", 
-    "path_results": "~/pet-poison-guard/ppg_backend/app/services/snapshots/", 
-    "model_path": "~/pet-poison-guard/ppg_backend/app/services/snapshots/model_e220_v-4.700.pth.tar", 
-    "recipe_path": "~/pet-poison-guard/ppg_backend/app/services/snapshots/layer1.json",
-    "pet_poison_path": "~/pet-poison-guard/ppg_backend/app/services/snapshots/petpoison_data.json",
     "embtype": "image", 
     "medr": 1000, 
     "maxlen": 20

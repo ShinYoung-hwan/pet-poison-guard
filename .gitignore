@@ -9,8 +9,8 @@ ppg_backend/app/services/snapshots/
 !ppg_backend/app/services/snapshots/config.json
 
 # Database
-ppg_database/*.json
-ppg_database/*.pkl
+ppg_database/data/
+ppg_database/.gitignore
 
 # Frontend Logs
 logs
