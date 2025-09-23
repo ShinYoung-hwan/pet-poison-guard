@@ -1,3 +1,3 @@
 echo "Loading data into PostgreSQL..."
-python /app/load_tables.py
+python3 /app/load_tables.py
 echo "Data loading completed."

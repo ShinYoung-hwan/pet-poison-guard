@@ -1,8 +1,9 @@
 {
     "TODO": "clear unnecessary options",
     "seed": 1234, 
-    "model_path": "~/pet-poison-guard/ppg_backend/app/services/snapshots/model_e220_v-4.700.pth.tar",
+    "model_path": "./app/services/snapshots/model_e220_v-4.700.pth.tar",
     "snapshots": "snapshots/", 
+    
     "embDim": 1024, 
     "nRNNs": 1, 
     "srnnDim": 1024, 
