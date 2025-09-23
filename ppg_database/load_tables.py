@@ -18,7 +18,7 @@ DB_USER = os.environ.get("DB_USER", "postgres")
 DB_PASSWORD = os.environ.get("DB_PASSWORD", "mysecretpassword")
 
 # --- Concurrency Control ---
-MAX_CONCURRENT = 16
+MAX_CONCURRENT = int(os.environ.get("MAX_CONCURRENT", "16"))
 
 # --- Main Functions ---
 async def init(conn):
