@@ -4,4 +4,6 @@ export interface AnalysisResult {
   isDangerous: boolean;
   description: string;
   dangerLevel: 'safe' | 'warning' | 'danger';
+  image?: string; // 이미지 URL 또는 base64
+  // 상세 설명 등 추가 필드 필요시 확장
 }
