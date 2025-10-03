@@ -30,7 +30,7 @@ const UploadPage: React.FC = () => {
       </Typography>
       <ImageUpload onTaskId={setTaskId} />
       <Box mt={4}>
-  <ResultDisplay result={result} />
+        <ResultDisplay result={result} />
       </Box>
     </Container>
   );
