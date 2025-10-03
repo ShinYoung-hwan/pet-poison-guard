@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Container, Typography, Box } from '@mui/material';
 import ImageUpload from '../components/ImageUpload';
