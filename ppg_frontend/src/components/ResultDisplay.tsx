@@ -1,4 +1,3 @@
-
 import React from 'react';
 import PoisonResultList, { type PoisonResult } from './PoisonResultList';
 import { Alert } from '@mui/material';
