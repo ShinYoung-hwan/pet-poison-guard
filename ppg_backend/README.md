@@ -54,5 +54,11 @@
 - 테스트 코드는 `test/`에 위치합니다.
 - 테스트 실행:
    ```sh
-   pytest app/test/
+   # Unit tests
+   pytest test/unit
+
+   # Performance tests
+   locust -f test/performance/locustfile.py \
+      --host http://127.0.0.1:8000 \
+      --logfile=test/performance/performance.txt
    ```

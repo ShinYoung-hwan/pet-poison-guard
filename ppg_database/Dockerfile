@@ -7,8 +7,6 @@ FROM pgvector/pgvector:0.8.1-pg17-trixie
 # 데이터 파일들이 위치할 작업 디렉토리를 /app으로 설정합니다.
 WORKDIR /app
 
-#
-
 # --- Python 설치 및 패키지 설치 및 가상 환경 생성 ---
 RUN apt update && apt upgrade -y \
     && apt install -y python3.13 python3-pip \
@@ -23,7 +21,10 @@ ENV PGPORT=5432
 
 # --- 파일 복사 ---
 # 호스트의 모든 data 파일들을 컨테이너의 /app/ 디렉토리로 복사한다.
-COPY ./data/* /app/
+COPY ./data/layer1.json /app/
+COPY ./data/petpoison_data.json /app/
+COPY ./data/rec_ids.pkl /app/
+COPY ./data/rec_embeds.pkl /app/
 COPY ./load_tables.py /app/
 
 # 초기화 스크립트인 create_tables.sql 파일을
