@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Card, CardContent, CardMedia, Typography, Box, Accordion, AccordionSummary, AccordionDetails, IconButton } from '@mui/material';
+import { CardMedia, Typography, Box, Accordion, AccordionSummary, AccordionDetails } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 
 export interface PoisonResult {
