@@ -1,0 +1,12 @@
+[2025-10-11 10:39:27] INFO: Loading data files...
+[2025-10-11 10:39:28] INFO: Loading poison database and extracting keywords...
+100%|██████████| 1029720/1029720 [08:14<00:00, 2084.25it/s]
+
+[2025-10-11 10:48:16] INFO: Start recall@k evaluation for 51304 images.
+Processing images: 100%|██████████| 51304/51304 [5:23:02<00:00,  2.65it/s]
+
+[2025-10-11 16:11:19] INFO: Recall@k results:
+[2025-10-11 16:11:19] INFO: Recall@1: 0.9062
+[2025-10-11 16:11:19] INFO: Recall@5: 0.9974
+[2025-10-11 16:11:19] INFO: Recall@10: 1.0000
+
