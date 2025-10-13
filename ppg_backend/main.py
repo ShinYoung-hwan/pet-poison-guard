@@ -11,10 +11,18 @@ logging.basicConfig(level=logging.INFO)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     from app.services.ai_service import load_model
+    from app.services.worker_service import start_workers, stop_workers
     # Load global resources
     load_model()
+    # Start in-process worker pool
+    shutdown_event = await start_workers()
+    app.state._task_queue_shutdown = shutdown_event
     yield
-    # Cleanup if needed
+    # Cleanup workers
+    try:
+        await stop_workers(app.state._task_queue_shutdown)
+    except Exception:
+        logger.exception("Error during worker shutdown")
 
 app = FastAPI(
     title="Pet Poison Guard Backend API",

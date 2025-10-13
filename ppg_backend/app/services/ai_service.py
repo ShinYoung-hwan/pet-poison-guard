@@ -7,7 +7,8 @@ import numpy as np
 import torch
 from torch import nn
 from typing import Union
-import logging
+
+from fastapi.logger import logger
 
 import time
 from PIL import Image
@@ -31,10 +32,10 @@ def load_model():
         device = torch.device(*('cuda',0))
     
     # Load model
-    logging.info(f"Loading model to {device}...")
+    logger.info(f"Loading model to {device}...")
     model = im2recipe()
     model.to(device)
-    logging.info(f"Loading checkpoint from {opts.model_path} ...")
+    logger.info(f"Loading checkpoint from {opts.model_path} ...")
     t0 = time.time()
     if device.type=='cpu':
         checkpoint = torch.load(opts.model_path, encoding='latin1', weights_only=False, map_location='cpu')
@@ -42,7 +43,7 @@ def load_model():
         checkpoint = torch.load(opts.model_path, encoding='latin1', weights_only=False)
     model.load_state_dict(checkpoint['state_dict'], strict=False)
     model.eval()
-    logging.info(f"Model loaded. (elapsed: {time.time()-t0:.2f}s)")
+    logger.info(f"Model loaded. (elapsed: {time.time()-t0:.2f}s)")
 
 def image_to_embedding(image_path):
     normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
@@ -52,19 +53,19 @@ def image_to_embedding(image_path):
         transforms.ToTensor(),
         normalize,
     ])
-    logging.info(f"Loading and transforming image: {image_path}")
+    logger.info(f"Loading and transforming image: {image_path}")
     t0 = time.time()
     img = Image.open(image_path).convert('RGB')
     img_tensor = transform(img)
     if not isinstance(img_tensor, torch.Tensor):
         raise TypeError("Transform did not return a tensor")
     img_tensor = img_tensor.unsqueeze(0).to(device)
-    logging.info(f"Image loaded and transformed. (elapsed: {time.time()-t0:.2f}s)")
-    logging.info("Running model to extract vision embedding only...")
+    logger.info(f"Image loaded and transformed. (elapsed: {time.time()-t0:.2f}s)")
+    logger.info("Running model to extract vision embedding only...")
     t0 = time.time()
     if model is None or device is None:
         raise ValueError("Model or device not initialized. Call load_model() first.")
     with torch.no_grad():
         visual_emb = model(img_tensor)
-    logging.info(f"Vision embedding extracted. (elapsed: {time.time()-t0:.2f}s)")
+    logger.info(f"Vision embedding extracted. (elapsed: {time.time()-t0:.2f}s)")
     return visual_emb.cpu().numpy()[0]

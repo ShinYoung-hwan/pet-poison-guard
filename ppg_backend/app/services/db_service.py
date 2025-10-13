@@ -4,9 +4,9 @@ from pgvector.sqlalchemy import Vector
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from ..models.db_models import RecipeData, RecEmbed, PetPoison
-from typing import List, Dict, Tuple
+from typing import List, Dict, Tuple, Any
 import time
-import logging
+from fastapi.logger import logger
 
 async def find_top_k_recipes(db: AsyncSession, query_emb, top_k: int = 10) -> List[Tuple[int, float]]:
     t0 = time.time()
@@ -21,7 +21,7 @@ async def find_top_k_recipes(db: AsyncSession, query_emb, top_k: int = 10) -> Li
     topk_recipes = [(row.id, 1 - row.similarity) for row in rows]
 
     t = time.time()
-    logging.info(f"Top-{top_k} recipes found on db. (elapsed: {t - t0:.2f}s)")
+    logger.info(f"Top-{top_k} recipes found on db. (elapsed: {t - t0:.2f}s)")
 
     return topk_recipes
 

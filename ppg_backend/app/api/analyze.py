@@ -1,7 +1,7 @@
 from fastapi import APIRouter, UploadFile, File, HTTPException, BackgroundTasks, Depends
 from fastapi.logger import logger
 from app.schemas.task import TaskCreateResponse, TaskStatusResponse, TaskStatus
-from app.services.queue_service import run_analysis_task
+from app.services.queue_service import run_analysis_task, enqueue
 from app.services.task.task_service import create_task, get_task
 
 
@@ -35,7 +35,13 @@ async def analyze_image(background_tasks: BackgroundTasks, file: UploadFile = Fi
     contents = await file.read()
     validate_image_file(file, contents)
     task_id = await create_task({"filename": file.filename, "content_type": file.content_type})
-    background_tasks.add_task(run_analysis_task, task_id, (file.filename, contents, file.content_type))
+    # Prefer enqueueing to the worker pool. enqueue is async and will schedule the work
+    # quickly; callers still get an immediate 202 with task id.
+    try:
+        await enqueue(task_id, (file.filename, contents, file.content_type))
+    except Exception:
+        # Fallback: schedule direct background task if enqueue fails for any reason
+        background_tasks.add_task(run_analysis_task, task_id, (file.filename, contents, file.content_type))
     return {"taskId": task_id}
 
 @router.get(
