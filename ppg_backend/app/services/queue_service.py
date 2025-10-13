@@ -21,15 +21,24 @@ _task_queue: Optional[asyncio.Queue] = None
 
 
 async def process_task_item(task_id: str, file_tuple: Tuple):
-    """Process one queued task (wraps the original run_analysis_task logic)."""
+    """Process one queued task (file_tuple is expected to be (tmp_path, filename, content_type))."""
+    tmp_path = None
     try:
-        ai_result = await request_ai_analysis(file_tuple)
+        tmp_path, filename, content_type = file_tuple
+        ai_result = await request_ai_analysis(tmp_path, timeout=15.0, top_k=10)
         await save_task_result(task_id, ai_result)
         logger.info(f"AI analysis complete for {task_id}")
     except Exception as e:
         # mark failed and save error
         await update_task_status(task_id, TaskStatus.failed, last_error=str(e))
         logger.error(f"AI analyze error for {task_id}: {str(e)}")
+    finally:
+        # ensure temporary file is removed if it exists
+        try:
+            if tmp_path and os.path.exists(tmp_path):
+                os.unlink(tmp_path)
+        except Exception:
+            logger.warning(f"Failed to remove temp file {tmp_path}")
 
 
 async def run_analysis_task(task_id: str, file_tuple):
@@ -40,19 +49,15 @@ async def run_analysis_task(task_id: str, file_tuple):
     await process_task_item(task_id, file_tuple)
 
 
-async def request_ai_analysis(file: Tuple, timeout: float = 15.0, top_k: int = 10) -> List[Dict[str, str]]:
+async def request_ai_analysis(tmp_path: str, timeout: float = 15.0, top_k: int = 10) -> List[Dict[str, str]]:
     """
-    file: tuple (filename, fileobj, content_type)
+    tmp_path: path to the image file on disk
     Returns: list of dicts [{"name": ..., "image": ..., "description": ...}], sorted by similarity descending
     """
     async with _semaphore:
-        filename, fileobj, content_type = file
-        with tempfile.NamedTemporaryFile(delete=True, suffix=os.path.splitext(filename)[-1]) as tmp:
-            tmp.write(fileobj)
-            tmp.flush()
-            # image_to_embedding is blocking; run in executor to avoid blocking the event loop
-            loop = asyncio.get_running_loop()
-            query_emb = await loop.run_in_executor(None, image_to_embedding, tmp.name)
+        # image_to_embedding is blocking; run in executor to avoid blocking the event loop
+        loop = asyncio.get_running_loop()
+        query_emb = await loop.run_in_executor(None, image_to_embedding, tmp_path)
 
     # Query DB for top-k recipes and find poisons
     async with AsyncSessionLocal() as db:
@@ -65,6 +70,7 @@ async def request_ai_analysis(file: Tuple, timeout: float = 15.0, top_k: int = 1
 
 
 def ensure_queue():
+    """Ensure the global in-process task queue is initialized."""
     global _task_queue
     if _task_queue is None:
         _task_queue = asyncio.Queue()

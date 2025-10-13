@@ -1,4 +1,6 @@
 from fastapi import APIRouter, UploadFile, File, HTTPException, BackgroundTasks, Depends
+import tempfile
+import os
 from fastapi.logger import logger
 from app.schemas.task import TaskCreateResponse, TaskStatusResponse, TaskStatus
 from app.services.queue_service import run_analysis_task, enqueue
@@ -37,11 +39,28 @@ async def analyze_image(background_tasks: BackgroundTasks, file: UploadFile = Fi
     task_id = await create_task({"filename": file.filename, "content_type": file.content_type})
     # Prefer enqueueing to the worker pool. enqueue is async and will schedule the work
     # quickly; callers still get an immediate 202 with task id.
+    # Persist uploaded bytes to a temp file and enqueue the temp path (to avoid keeping bytes in memory)
+    tmp_path = None
     try:
-        await enqueue(task_id, (file.filename, contents, file.content_type))
+        suffix = os.path.splitext(file.filename)[-1] if file.filename else None
+        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+            tmp.write(contents)
+            tmp.flush()
+            tmp_path = tmp.name
+        # enqueue a small tuple (tmp_path, original filename, content_type)
+        try:
+            await enqueue(task_id, (tmp_path, file.filename, file.content_type))
+        except Exception:
+            # Fallback: schedule direct background task if enqueue fails
+            background_tasks.add_task(run_analysis_task, task_id, (tmp_path, file.filename, file.content_type))
     except Exception:
-        # Fallback: schedule direct background task if enqueue fails for any reason
-        background_tasks.add_task(run_analysis_task, task_id, (file.filename, contents, file.content_type))
+        # cleanup on failure
+        if tmp_path and os.path.exists(tmp_path):
+            try:
+                os.unlink(tmp_path)
+            except Exception:
+                pass
+        raise
     return {"taskId": task_id}
 
 @router.get(
