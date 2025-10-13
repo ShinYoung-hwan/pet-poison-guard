@@ -32,7 +32,7 @@ def on_test_stop(environment, **kwargs):
 
             plt.figure(figsize=(8, 4))
             plt.hist(seconds, bins=20, color="skyblue", edgecolor="black")
-            plt.title(f"Distribution of Completion Times if {len(seconds)} requests ~ N({avg:.2f}, {std:.2f})\n{info}")
+            plt.title(f"Distribution of Completion Times of {len(seconds)} requests ~ N({avg:.2f}, {std:.2f})\n{info}")
             plt.xlabel("Time (seconds)")
             plt.ylabel("Frequency")
             plt.tight_layout()
