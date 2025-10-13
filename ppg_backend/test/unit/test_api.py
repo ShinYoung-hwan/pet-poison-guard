@@ -1,6 +1,7 @@
 import sys, os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 import pytest
+import asyncio
 from fastapi.testclient import TestClient
 from main import app
 
@@ -16,7 +17,7 @@ def test_health_success():
 # Analyze API
 def test_analyze_image_success(monkeypatch):
     # 정상적인 이미지 파일 업로드 시 /api/analyze가 성공적으로 taskId를 반환하는지 검증
-    def mock_request_ai_analysis(file_tuple, timeout=15.0, top_k=10):
+    async def mock_request_ai_analysis(file_tuple, timeout=15.0, top_k=10):
         return [{"name": "chocolate", "image": "img.png", "description": "toxic"}]
     monkeypatch.setattr("app.services.queue_service.request_ai_analysis", mock_request_ai_analysis)
     img_bytes = b"\x89PNG\r\n\x1a\n"  # PNG header
@@ -42,7 +43,7 @@ def test_analyze_image_too_large():
 
 def test_analyze_image_edge_case_min_size(monkeypatch):
     # 최소 크기의 유효 이미지 업로드 시 /api/analyze가 정상적으로 동작하는지 검증 (엣지 케이스)
-    def mock_request_ai_analysis(file_tuple, timeout=15.0, top_k=10):
+    async def mock_request_ai_analysis(file_tuple, timeout=15.0, top_k=10):
         return []
     monkeypatch.setattr("app.services.queue_service.request_ai_analysis", mock_request_ai_analysis)
     img_bytes = b"\x89PNG\r\n\x1a\n"
@@ -53,9 +54,9 @@ def test_analyze_image_edge_case_min_size(monkeypatch):
 # Task Status API
 def test_get_task_status_success(monkeypatch):
     # 완료된 taskId에 대해 /api/task/{task_id}가 status와 data를 올바르게 반환하는지 검증
-    from app.services.task_service import create_task, set_task_completed
-    task_id = create_task()
-    set_task_completed(task_id, [{"name": "chocolate"}])
+    from app.services.task.task_service import create_task, save_task_result
+    task_id = asyncio.run(create_task())
+    asyncio.run(save_task_result(task_id, [{"name": "chocolate"}]))
     resp = client.get(f"/api/task/{task_id}")
     assert resp.status_code == 200
     assert resp.json()["status"] == "completed"
@@ -71,9 +72,10 @@ def test_get_task_status_not_found():
 
 def test_get_task_status_failed(monkeypatch):
     # 실패 상태의 taskId에 대해 /api/task/{task_id}가 status와 detail을 올바르게 반환하는지 검증
-    from app.services.task_service import create_task, set_task_failed
-    task_id = create_task()
-    set_task_failed(task_id, "AI error")
+    from app.services.task.task_service import create_task, update_task_status
+    from app.schemas.task import TaskStatus
+    task_id = asyncio.run(create_task())
+    asyncio.run(update_task_status(task_id, TaskStatus.failed, detail="AI error"))
     resp = client.get(f"/api/task/{task_id}")
     assert resp.status_code == 200
     assert resp.json()["status"] == "failed"

@@ -2,7 +2,7 @@ from fastapi import APIRouter, UploadFile, File, HTTPException, BackgroundTasks,
 from fastapi.logger import logger
 from app.schemas.task import TaskCreateResponse, TaskStatusResponse, TaskStatus
 from app.services.queue_service import run_analysis_task
-from app.services.task_service import create_task, get_task
+from app.services.task.task_service import create_task, get_task
 
 
 MAX_FILE_SIZE = 5 * 1024 * 1024  # 5MB
@@ -34,7 +34,7 @@ def validate_image_file(file: UploadFile, contents: bytes):
 async def analyze_image(background_tasks: BackgroundTasks, file: UploadFile = File(...)):
     contents = await file.read()
     validate_image_file(file, contents)
-    task_id = create_task()
+    task_id = await create_task({"filename": file.filename, "content_type": file.content_type})
     background_tasks.add_task(run_analysis_task, task_id, (file.filename, contents, file.content_type))
     return {"taskId": task_id}
 
@@ -48,12 +48,13 @@ async def analyze_image(background_tasks: BackgroundTasks, file: UploadFile = Fi
     }
 )
 async def get_task_status(task_id: str):
-    task = get_task(task_id)
+    task = await get_task(task_id)
     if not task:
         raise HTTPException(status_code=404, detail="Task not found.")
     resp = {"status": task["status"]}
+    # TaskStatus enum uses 'completed' for completed state in Phase A
     if task["status"] == TaskStatus.completed:
-        resp["data"] = task["data"]
+        resp["data"] = task.get("result")
     elif task["status"] == TaskStatus.failed:
-        resp["detail"] = task["detail"]
+        resp["detail"] = task.get("detail")
     return resp

@@ -5,19 +5,20 @@ import tempfile
 from fastapi.logger import logger
 
 from .ai_service import image_to_embedding
-from ..models.db_session import AsyncSessionLocal
 from .db_service import find_poisons_in_recipe, find_top_k_recipes
-from .task_service import set_task_completed, set_task_failed    
+from app.models.db_session import AsyncSessionLocal
+from app.services.task.task_service import save_task_result, update_task_status, increment_retries
+from app.schemas.task import TaskStatus
 
 semaphore = asyncio.Semaphore(1)
 
 async def run_analysis_task(task_id: str, file_tuple):
     try:
         ai_result = await request_ai_analysis(file_tuple)
-        set_task_completed(task_id, ai_result)
+        await save_task_result(task_id, ai_result)
         logger.info(f"AI analysis complete for {task_id}")
     except Exception as e:
-        set_task_failed(task_id, str(e))
+        await update_task_status(task_id, TaskStatus.failed, last_error=str(e))
         logger.error(f"AI analyze error for {task_id}: {str(e)}")
 
 async def request_ai_analysis(file: Tuple, timeout: float = 15.0, top_k: int = 10) -> List[Dict[str, str]]:
@@ -30,7 +31,9 @@ async def request_ai_analysis(file: Tuple, timeout: float = 15.0, top_k: int = 1
         with tempfile.NamedTemporaryFile(delete=True, suffix=os.path.splitext(filename)[-1]) as tmp:
             tmp.write(fileobj)
             tmp.flush()
-            query_emb = image_to_embedding(tmp.name)
+            # image_to_embedding is blocking; run in executor to avoid blocking the event loop
+            loop = asyncio.get_running_loop()
+            query_emb = await loop.run_in_executor(None, image_to_embedding, tmp.name)
     
     # instead of using get_db()
     async with AsyncSessionLocal() as db:
@@ -39,4 +42,5 @@ async def request_ai_analysis(file: Tuple, timeout: float = 15.0, top_k: int = 1
             poisons = await find_poisons_in_recipe(db, topk)
             return poisons
         finally:
-            await db.close() # Actually, async with automatically close it.
+            # async with will close the session; nothing to do here
+            pass
