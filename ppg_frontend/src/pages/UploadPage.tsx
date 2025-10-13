@@ -31,7 +31,7 @@ const UploadPage: React.FC = () => {
       if (status === 'pending') setPollingStatus('pending');
       if (status === 'completed') setPollingStatus('completed');
     },
-    onError: (err: any) => {
+    onError: () => {
       setPollingStatus('error');
       setErrorMsg('분석 중 오류가 발생했습니다.');
     },

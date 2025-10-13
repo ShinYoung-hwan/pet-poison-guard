@@ -24,7 +24,7 @@ const HomePage: React.FC = () => {
       </Typography>
       <ImageUpload onTaskId={setTaskId} />
       <Box mt={4}>
-        <ResultDisplay result={result} />
+        <ResultDisplay result={result} imageUploaded={taskId !== null} />
       </Box>
     </Container>
   );
