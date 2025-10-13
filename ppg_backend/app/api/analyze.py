@@ -1,8 +1,8 @@
 from fastapi import APIRouter, UploadFile, File, HTTPException, BackgroundTasks, Depends
 from fastapi.logger import logger
 from app.schemas.task import TaskCreateResponse, TaskStatusResponse, TaskStatus
-from app.services.ai_service import request_ai_analysis
-from app.services.task_service import create_task, set_task_completed, set_task_failed, get_task
+from app.services.queue_service import run_analysis_task
+from app.services.task_service import create_task, get_task
 
 
 MAX_FILE_SIZE = 5 * 1024 * 1024  # 5MB
@@ -18,15 +18,6 @@ def validate_image_file(file: UploadFile, contents: bytes):
     if len(contents) > MAX_FILE_SIZE:
         logger.warning(f"File too large: {len(contents)} bytes")
         raise HTTPException(status_code=413, detail="File too large. Max 5MB allowed.")
-
-async def run_analysis_task(task_id: str, file_tuple):
-    try:
-        ai_result = await request_ai_analysis(file_tuple)
-        set_task_completed(task_id, ai_result)
-        logger.info(f"AI analysis complete for {task_id}")
-    except Exception as e:
-        set_task_failed(task_id, str(e))
-        logger.error(f"AI analyze error for {task_id}: {str(e)}")
 
 @router.post(
     "/analyze",

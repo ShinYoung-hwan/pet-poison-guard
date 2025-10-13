@@ -18,7 +18,7 @@ def test_analyze_image_success(monkeypatch):
     # 정상적인 이미지 파일 업로드 시 /api/analyze가 성공적으로 taskId를 반환하는지 검증
     def mock_request_ai_analysis(file_tuple, timeout=15.0, top_k=10):
         return [{"name": "chocolate", "image": "img.png", "description": "toxic"}]
-    monkeypatch.setattr("app.services.ai_service.request_ai_analysis", mock_request_ai_analysis)
+    monkeypatch.setattr("app.services.queue_service.request_ai_analysis", mock_request_ai_analysis)
     img_bytes = b"\x89PNG\r\n\x1a\n"  # PNG header
     resp = client.post("/api/analyze", files={"file": ("test.png", img_bytes, "image/png")})
     assert resp.status_code == 202
@@ -44,7 +44,7 @@ def test_analyze_image_edge_case_min_size(monkeypatch):
     # 최소 크기의 유효 이미지 업로드 시 /api/analyze가 정상적으로 동작하는지 검증 (엣지 케이스)
     def mock_request_ai_analysis(file_tuple, timeout=15.0, top_k=10):
         return []
-    monkeypatch.setattr("app.services.ai_service.request_ai_analysis", mock_request_ai_analysis)
+    monkeypatch.setattr("app.services.queue_service.request_ai_analysis", mock_request_ai_analysis)
     img_bytes = b"\x89PNG\r\n\x1a\n"
     resp = client.post("/api/analyze", files={"file": ("tiny.png", img_bytes, "image/png")})
     assert resp.status_code == 202

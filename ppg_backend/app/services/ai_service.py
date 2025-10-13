@@ -1,24 +1,21 @@
 import os
 import time
 import asyncio
-from .snapshots.utils import load_config_as_namespace
+from .utils import load_config_as_namespace
 
 import numpy as np
 import torch
 from torch import nn
-from typing import List, Dict, Union
+from typing import Union
 import logging
-import tempfile
+
 import time
 from PIL import Image
 import torchvision.transforms as transforms
 
-from .snapshots.trijoint import im2recipe
-from .db_service import find_poisons_in_recipe, find_top_k_recipes
-from ..models.db_session import AsyncSessionLocal
+from .encoders.trijoint import im2recipe
 
 # Only keep model and device as globals
-semaphore = asyncio.Semaphore(1)
 model: Union[nn.Module, None] = None
 device: Union[torch.device, None] = None
 opts = load_config_as_namespace()
@@ -71,24 +68,3 @@ def image_to_embedding(image_path):
         visual_emb = model(img_tensor)
     logging.info(f"Vision embedding extracted. (elapsed: {time.time()-t0:.2f}s)")
     return visual_emb.cpu().numpy()[0]
-
-async def request_ai_analysis(file: tuple, timeout: float = 15.0, top_k: int = 10) -> List[Dict[str, str]]:
-    """
-    file: tuple (filename, fileobj, content_type)
-    Returns: list of dicts [{"name": ..., "image": ..., "description": ...}], sorted by similarity descending
-    """
-    async with semaphore:
-        filename, fileobj, content_type = file
-        with tempfile.NamedTemporaryFile(delete=True, suffix=os.path.splitext(filename)[-1]) as tmp:
-            tmp.write(fileobj)
-            tmp.flush()
-            query_emb = image_to_embedding(tmp.name)
-    
-    # instead of using get_db()
-    async with AsyncSessionLocal() as db:
-        try:
-            topk = await find_top_k_recipes(db, query_emb, top_k=top_k)
-            poisons = await find_poisons_in_recipe(db, topk)
-            return poisons
-        finally:
-            await db.close() # Actually, async with automatically close it.

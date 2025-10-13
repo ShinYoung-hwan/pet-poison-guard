@@ -1,0 +1,42 @@
+from typing import Tuple, List, Dict
+import asyncio
+import os
+import tempfile
+from fastapi.logger import logger
+
+from .ai_service import image_to_embedding
+from ..models.db_session import AsyncSessionLocal
+from .db_service import find_poisons_in_recipe, find_top_k_recipes
+from .task_service import set_task_completed, set_task_failed    
+
+semaphore = asyncio.Semaphore(1)
+
+async def run_analysis_task(task_id: str, file_tuple):
+    try:
+        ai_result = await request_ai_analysis(file_tuple)
+        set_task_completed(task_id, ai_result)
+        logger.info(f"AI analysis complete for {task_id}")
+    except Exception as e:
+        set_task_failed(task_id, str(e))
+        logger.error(f"AI analyze error for {task_id}: {str(e)}")
+
+async def request_ai_analysis(file: Tuple, timeout: float = 15.0, top_k: int = 10) -> List[Dict[str, str]]:
+    """
+    file: tuple (filename, fileobj, content_type)
+    Returns: list of dicts [{"name": ..., "image": ..., "description": ...}], sorted by similarity descending
+    """
+    async with semaphore:
+        filename, fileobj, content_type = file
+        with tempfile.NamedTemporaryFile(delete=True, suffix=os.path.splitext(filename)[-1]) as tmp:
+            tmp.write(fileobj)
+            tmp.flush()
+            query_emb = image_to_embedding(tmp.name)
+    
+    # instead of using get_db()
+    async with AsyncSessionLocal() as db:
+        try:
+            topk = await find_top_k_recipes(db, query_emb, top_k=top_k)
+            poisons = await find_poisons_in_recipe(db, topk)
+            return poisons
+        finally:
+            await db.close() # Actually, async with automatically close it.

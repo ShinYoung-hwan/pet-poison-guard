@@ -2,7 +2,7 @@ import torch.nn as nn
 import torchvision.models as models
 
 # =============================================================================
-from .utils import load_config_as_namespace
+from ..utils import load_config_as_namespace
 opts = load_config_as_namespace()
 # # =============================================================================
 

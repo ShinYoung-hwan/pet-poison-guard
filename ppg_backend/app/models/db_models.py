@@ -1,7 +1,6 @@
 from sqlalchemy import Column, String, Integer, JSON, Text, ARRAY
-from sqlalchemy.ext.declarative import declarative_base
 from pgvector.sqlalchemy import Vector
-
+from sqlalchemy.orm import declarative_base
 Base = declarative_base()
 
 class RecipeData(Base):
