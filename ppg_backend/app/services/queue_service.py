@@ -1,7 +1,6 @@
-from typing import Tuple, List, Dict, Optional
+from typing import Tuple, List, Dict, Optional, Callable
 import asyncio
 import os
-import tempfile
 from fastapi.logger import logger
 
 from .ai_service import image_to_embedding
@@ -14,23 +13,54 @@ from app.services.task.task_service import (
 )
 from app.schemas.task import TaskStatus
 
-# Concurrency primitives
-_semaphore = asyncio.Semaphore(1)
-# In-process queue 
-_task_queue: Optional[asyncio.Queue] = None
+
+class QueueManager:
+    """Lightweight in-process queue manager with injectable processing callback.
+
+    This class encapsulates queue creation and exposes enqueue/get operations. Tests
+    can instantiate their own QueueManager and pass a custom process callback to workers.
+    """
+
+    def __init__(self):
+        self._queue: asyncio.Queue = asyncio.Queue()
+
+    def ensure(self) -> asyncio.Queue:
+        return self._queue
+
+    async def enqueue(self, task_id: str, file_tuple: Tuple) -> None:
+        await self._queue.put((task_id, file_tuple))
+
+    async def get(self):
+        return await self._queue.get()
 
 
-async def process_task_item(task_id: str, file_tuple: Tuple):
+_default_queue_manager: Optional[QueueManager] = None
+
+
+def get_default_queue_manager() -> QueueManager:
+    global _default_queue_manager
+    if _default_queue_manager is None:
+        _default_queue_manager = QueueManager()
+    return _default_queue_manager
+
+
+async def process_task_item(task_id: str, file_tuple: Tuple, *,
+                            request_ai_fn: Optional[Callable] = None,
+                            save_fn: Optional[Callable] = None,
+                            update_status_fn: Optional[Callable] = None):
     """Process one queued task (file_tuple is expected to be (tmp_path, filename, content_type))."""
     tmp_path = None
+    request_ai_fn = request_ai_fn or request_ai_analysis
+    save_fn = save_fn or save_task_result
+    update_status_fn = update_status_fn or update_task_status
     try:
         tmp_path, filename, content_type = file_tuple
-        ai_result = await request_ai_analysis(tmp_path, timeout=15.0, top_k=10)
-        await save_task_result(task_id, ai_result)
+        ai_result = await request_ai_fn(tmp_path, timeout=15.0, top_k=10)
+        await save_fn(task_id, ai_result)
         logger.info(f"AI analysis complete for {task_id}")
     except Exception as e:
         # mark failed and save error
-        await update_task_status(task_id, TaskStatus.failed, last_error=str(e))
+        await update_status_fn(task_id, TaskStatus.failed, last_error=str(e))
         logger.error(f"AI analyze error for {task_id}: {str(e)}")
     finally:
         # ensure temporary file is removed if it exists
@@ -49,36 +79,36 @@ async def run_analysis_task(task_id: str, file_tuple):
     await process_task_item(task_id, file_tuple)
 
 
+# Global semaphore for request_ai_analysis
+_request_ai_analysis_semaphore: Optional[asyncio.Semaphore] = None
+
 async def request_ai_analysis(tmp_path: str, timeout: float = 15.0, top_k: int = 10) -> List[Dict[str, str]]:
     """
     tmp_path: path to the image file on disk
     Returns: list of dicts [{"name": ..., "image": ..., "description": ...}], sorted by similarity descending
     """
-    async with _semaphore:
+    # Semaphore ensures image_to_embedding is run serially to avoid heavy CPU contention
+    global _request_ai_analysis_semaphore
+    if _request_ai_analysis_semaphore is None:
+        _request_ai_analysis_semaphore = asyncio.Semaphore(1)
+
+    async with _request_ai_analysis_semaphore:
         # image_to_embedding is blocking; run in executor to avoid blocking the event loop
         loop = asyncio.get_running_loop()
         query_emb = await loop.run_in_executor(None, image_to_embedding, tmp_path)
 
     # Query DB for top-k recipes and find poisons
     async with AsyncSessionLocal() as db:
-        try:
-            topk = await find_top_k_recipes(db, query_emb, top_k=top_k)
-            poisons = await find_poisons_in_recipe(db, topk)
-            return poisons
-        finally:
-            pass
+        topk = await find_top_k_recipes(db, query_emb, top_k=top_k)
+        poisons = await find_poisons_in_recipe(db, topk)
+        return poisons
 
 
-def ensure_queue():
-    """Ensure the global in-process task queue is initialized."""
-    global _task_queue
-    if _task_queue is None:
-        _task_queue = asyncio.Queue()
-    return _task_queue
+def ensure_queue_manager() -> QueueManager:
+    return get_default_queue_manager()
 
 
 async def enqueue(task_id: str, file_tuple: Tuple) -> None:
-    """Put a task into the in-process queue for workers to pick up."""
-    # TODO : enqueue bytes to disk-backed queue if too large 
-    q = ensure_queue()
-    await q.put((task_id, file_tuple))
+    """Put a task into the default in-process queue for workers to pick up."""
+    qm = ensure_queue_manager()
+    await qm.enqueue(task_id, file_tuple)
