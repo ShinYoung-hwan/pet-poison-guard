@@ -17,13 +17,23 @@ def test_health_success():
 # Analyze API
 def test_analyze_image_success(monkeypatch):
     # 정상적인 이미지 파일 업로드 시 /api/analyze가 성공적으로 taskId를 반환하는지 검증
-    async def mock_request_ai_analysis(file_tuple, timeout=15.0, top_k=10):
-        return [{"name": "chocolate", "image": "img.png", "description": "toxic"}]
-    monkeypatch.setattr("app.services.queue_service.request_ai_analysis", mock_request_ai_analysis)
+    # Override the create_task and enqueue dependencies provided by app.api.analyze
+    from app.api.analyze import get_create_task_fn, get_enqueue_fn
+
+    async def mock_create_task(input_meta=None):
+        return "test-task-id"
+
+    async def mock_enqueue(task_id, file_tuple):
+        # do nothing, simulate immediate enqueue
+        return None
+
+    app.dependency_overrides[get_create_task_fn] = lambda: mock_create_task
+    app.dependency_overrides[get_enqueue_fn] = lambda: mock_enqueue
     img_bytes = b"\x89PNG\r\n\x1a\n"  # PNG header
     resp = client.post("/api/analyze", files={"file": ("test.png", img_bytes, "image/png")})
     assert resp.status_code == 202
     assert "taskId" in resp.json()
+    app.dependency_overrides.clear()
 
 
 def test_analyze_image_invalid_type():
@@ -43,13 +53,21 @@ def test_analyze_image_too_large():
 
 def test_analyze_image_edge_case_min_size(monkeypatch):
     # 최소 크기의 유효 이미지 업로드 시 /api/analyze가 정상적으로 동작하는지 검증 (엣지 케이스)
-    async def mock_request_ai_analysis(file_tuple, timeout=15.0, top_k=10):
-        return []
-    monkeypatch.setattr("app.services.queue_service.request_ai_analysis", mock_request_ai_analysis)
+    from app.api.analyze import get_create_task_fn, get_enqueue_fn
+
+    async def mock_create_task(input_meta=None):
+        return "tiny-task-id"
+
+    async def mock_enqueue(task_id, file_tuple):
+        return None
+
+    app.dependency_overrides[get_create_task_fn] = lambda: mock_create_task
+    app.dependency_overrides[get_enqueue_fn] = lambda: mock_enqueue
     img_bytes = b"\x89PNG\r\n\x1a\n"
     resp = client.post("/api/analyze", files={"file": ("tiny.png", img_bytes, "image/png")})
     assert resp.status_code == 202
     assert "taskId" in resp.json()
+    app.dependency_overrides.clear()
 
 # Task Status API
 def test_get_task_status_success(monkeypatch):

@@ -2,9 +2,8 @@ from fastapi import APIRouter, UploadFile, File, HTTPException, BackgroundTasks,
 import tempfile
 import os
 from fastapi.logger import logger
+from typing import Callable
 from app.schemas.task import TaskCreateResponse, TaskStatusResponse, TaskStatus
-from app.services.queue_service import run_analysis_task, enqueue
-from app.services.task.task_service import create_task, get_task
 
 
 MAX_FILE_SIZE = 5 * 1024 * 1024  # 5MB
@@ -12,6 +11,30 @@ MAX_FILE_SIZE = 5 * 1024 * 1024  # 5MB
 router = APIRouter(
     prefix='/api'
 )
+
+
+def get_create_task_fn() -> Callable:
+    """FastAPI dependency returning the create_task callable.
+
+    Tests can override this dependency via app.dependency_overrides.
+    """
+    from app.services.task.task_service import create_task
+    return create_task
+
+
+def get_enqueue_fn() -> Callable:
+    from app.services.queue_service import enqueue
+    return enqueue
+
+
+def get_run_task_fn() -> Callable:
+    from app.services.queue_service import run_analysis_task
+    return run_analysis_task
+
+
+def get_task_fn() -> Callable:
+    from app.services.task.task_service import get_task
+    return get_task
 
 def validate_image_file(file: UploadFile, contents: bytes):
     if not file.content_type or not file.content_type.startswith("image/"):
@@ -33,10 +56,16 @@ def validate_image_file(file: UploadFile, contents: bytes):
         500: {"description": "Internal server error."}
     }
 )
-async def analyze_image(background_tasks: BackgroundTasks, file: UploadFile = File(...)):
+async def analyze_image(
+    background_tasks: BackgroundTasks,
+    file: UploadFile = File(...),
+    create_task_fn: Callable = Depends(get_create_task_fn),
+    enqueue_fn: Callable = Depends(get_enqueue_fn),
+    run_task_fn: Callable = Depends(get_run_task_fn),
+):
     contents = await file.read()
     validate_image_file(file, contents)
-    task_id = await create_task({"filename": file.filename, "content_type": file.content_type})
+    task_id = await create_task_fn({"filename": file.filename, "content_type": file.content_type})
     # Prefer enqueueing to the worker pool. enqueue is async and will schedule the work
     # quickly; callers still get an immediate 202 with task id.
     # Persist uploaded bytes to a temp file and enqueue the temp path (to avoid keeping bytes in memory)
@@ -49,10 +78,10 @@ async def analyze_image(background_tasks: BackgroundTasks, file: UploadFile = Fi
             tmp_path = tmp.name
         # enqueue a small tuple (tmp_path, original filename, content_type)
         try:
-            await enqueue(task_id, (tmp_path, file.filename, file.content_type))
+            await enqueue_fn(task_id, (tmp_path, file.filename, file.content_type))
         except Exception:
             # Fallback: schedule direct background task if enqueue fails
-            background_tasks.add_task(run_analysis_task, task_id, (tmp_path, file.filename, file.content_type))
+            background_tasks.add_task(run_task_fn, task_id, (tmp_path, file.filename, file.content_type))
     except Exception:
         # cleanup on failure
         if tmp_path and os.path.exists(tmp_path):
@@ -72,8 +101,15 @@ async def analyze_image(background_tasks: BackgroundTasks, file: UploadFile = Fi
         404: {"description": "Task not found."}
     }
 )
-async def get_task_status(task_id: str):
-    task = await get_task(task_id)
+async def get_task_status(
+        task_id: str, 
+        get_task_fn: Callable = Depends(get_task_fn)
+    ):
+    """Get task status using an injectable get_task function (overridable in tests).
+
+    The default dependency imports `get_task` from `app.services.task.task_service`.
+    """
+    task = await get_task_fn(task_id)
     if not task:
         raise HTTPException(status_code=404, detail="Task not found.")
     resp = {"status": task["status"]}
