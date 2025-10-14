@@ -29,3 +29,13 @@ def load_config_as_namespace(config_path=None):
                 config_dict = json.load(f)
             return SimpleNamespace(**config_dict)
     raise FileNotFoundError(f"Config file not found. Tried paths: {tried_paths}")
+
+
+# Application constants derived from config
+def get_max_file_size(config=None) -> int:
+    try:
+        cfg = config or load_config_as_namespace()
+        return int(getattr(cfg, "max_file_size", 5 * 1024 * 1024))
+    except Exception:
+        # Fallback default: 5MB
+        return 5 * 1024 * 1024

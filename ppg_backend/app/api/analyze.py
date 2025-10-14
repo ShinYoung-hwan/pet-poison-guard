@@ -4,9 +4,11 @@ import os
 from fastapi.logger import logger
 from typing import Callable
 from app.schemas.task import TaskCreateResponse, TaskStatusResponse, TaskStatus
+from app.services.utils import get_max_file_size
+from app.services.exceptions import AIServiceError, DBServiceError
 
 
-MAX_FILE_SIZE = 5 * 1024 * 1024  # 5MB
+MAX_FILE_SIZE = get_max_file_size()
 
 router = APIRouter(
     prefix='/api'
@@ -79,8 +81,11 @@ async def analyze_image(
         # enqueue a small tuple (tmp_path, original filename, content_type)
         try:
             await enqueue_fn(task_id, (tmp_path, file.filename, file.content_type))
+        except (AIServiceError, DBServiceError):
+            # Domain errors: fallback to background execution
+            background_tasks.add_task(run_task_fn, task_id, (tmp_path, file.filename, file.content_type))
         except Exception:
-            # Fallback: schedule direct background task if enqueue fails
+            # Generic fallback: schedule direct background task if enqueue fails
             background_tasks.add_task(run_task_fn, task_id, (tmp_path, file.filename, file.content_type))
     except Exception:
         # cleanup on failure

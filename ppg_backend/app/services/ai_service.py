@@ -9,6 +9,7 @@ from torch import nn
 from typing import Union
 
 from fastapi.logger import logger
+from .exceptions import AIServiceError
 
 import time
 from PIL import Image
@@ -44,6 +45,22 @@ def load_model():
     model.load_state_dict(checkpoint['state_dict'], strict=False)
     model.eval()
     logger.info(f"Model loaded. (elapsed: {time.time()-t0:.2f}s)")
+
+
+async def analyze_image_async(image_path: str, timeout: float = 15.0):
+    """Async wrapper around image_to_embedding -> request pipeline.
+
+    This function runs the blocking image_to_embedding in an executor and returns
+    the numpy-like embedding. It raises AIServiceError on error to allow callers
+    to catch domain-specific exceptions.
+    """
+    loop = asyncio.get_running_loop()
+    try:
+        emb = await loop.run_in_executor(None, image_to_embedding, image_path)
+        return emb
+    except Exception as e:
+        logger.exception("AI inference failed")
+        raise AIServiceError(str(e)) from e
 
 def image_to_embedding(image_path):
     normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
