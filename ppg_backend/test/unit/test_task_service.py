@@ -35,6 +35,10 @@ def test_inmemory_create_get_update_save_and_wrappers():
     assert task is not None
     assert task["status"] == TaskStatus.pending
     assert task["input_meta"]["filename"] == "food.jpg"
+    # new canonical timestamps should be numeric epoch seconds
+    assert "created_at" in task and isinstance(task["created_at"], (int, float))
+    assert "updated_at" in task and isinstance(task["updated_at"], (int, float))
+    assert task["created_at"] > 0 and task["updated_at"] > 0
 
     # update_task_status -> mark running
     ok = run(update_task_status(task_id, TaskStatus.running))
@@ -49,6 +53,8 @@ def test_inmemory_create_get_update_save_and_wrappers():
     task = run(get_task(task_id))
     assert task["status"] == TaskStatus.completed
     assert task["result"] == result_payload
+    # timestamps updated and numeric
+    assert isinstance(task["updated_at"], (int, float))
 
     # increment_retries on existing task
     retries = run(increment_retries(task_id))

@@ -16,7 +16,7 @@ applyTo: 'ppg_backend/**'
 - `app/api/health.py`: `/api/health` (GET)
 - `app/services/ai_service.py`: 모델 로드(`load_model()`), 이미지 → 임베딩(`image_to_embedding()`)
 - `app/services/queue_service.py`: 비동기 분석 태스크 실행 및 AI 호출
-- `app/services/task_service.py`: (현재) 인메모리 태스크 스토어 (생성/상태 업데이트/조회)
+- `app/services/task/task_service.py`: (현재) 인메모리 태스크 스토어 (생성/상태 업데이트/조회)
 - `app/services/db_service.py`: pgvector 기반 유사도 조회 및 독성 매핑 함수
 - `app/services/utils.py`: 설정 파일 로드 등 유틸
 

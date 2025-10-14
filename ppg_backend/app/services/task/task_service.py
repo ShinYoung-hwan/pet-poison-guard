@@ -15,6 +15,7 @@ implements the same async interface.
 """
 
 import asyncio
+import time
 import uuid
 from typing import Dict, Any, Optional, Tuple
 from datetime import datetime, timezone
@@ -50,7 +51,11 @@ class InMemoryTaskStore:
             'b7a9f2f0-...'
         """
         task_id = str(uuid.uuid4())
-        now = datetime.now(timezone.utc).isoformat() + 'Z'
+        # Store a single numeric epoch timestamp (seconds, float) as the
+        # canonical value for created_at/updated_at. This avoids fragile
+        # string parsing for internal comparisons. For backward
+        # compatibility we still accept legacy ISO strings on read.
+        now_ts = time.time()
         async with self._lock:
             self._tasks[task_id] = {
                 "id": task_id,
@@ -60,8 +65,9 @@ class InMemoryTaskStore:
                 "detail": None,
                 "retries": 0,
                 "last_error": None,
-                "created_at": now,
-                "updated_at": now,
+                # canonical numeric timestamps
+                "created_at": now_ts,
+                "updated_at": now_ts,
             }
         return task_id
 
@@ -108,7 +114,8 @@ class InMemoryTaskStore:
         """
         if not isinstance(task_id, str):
             raise TypeError("task_id must be a string")
-        now = datetime.now(timezone.utc).isoformat() + 'Z'
+        # Update the canonical numeric timestamp
+        now_ts = time.time()
         async with self._lock:
             if task_id not in self._tasks:
                 return False
@@ -120,7 +127,7 @@ class InMemoryTaskStore:
                 t["detail"] = detail
             if last_error is not None:
                 t["last_error"] = last_error
-            t["updated_at"] = now
+            t["updated_at"] = now_ts
         return True
 
     async def save_task_result(self, task_id: str, result: Any, error: Optional[str] = None) -> bool:
@@ -148,7 +155,8 @@ class InMemoryTaskStore:
             if task_id not in self._tasks:
                 return -1
             self._tasks[task_id]["retries"] += 1
-            self._tasks[task_id]["updated_at"] = datetime.now(timezone.utc).isoformat() + 'Z'
+            now_ts = time.time()
+            self._tasks[task_id]["updated_at"] = now_ts
             return self._tasks[task_id]["retries"]
 
     async def list_tasks(self) -> Dict[str, Dict[str, Any]]:
@@ -171,14 +179,27 @@ class InMemoryTaskStore:
         """
         if not isinstance(older_than_seconds, (int, float)) or older_than_seconds < 0:
             raise ValueError("older_than_seconds must be a non-negative number")
-        cutoff = datetime.now(timezone.utc).timestamp() - older_than_seconds
+        # Use epoch seconds for cutoff; prefer numeric stored timestamps,
+        # but fall back to parsing legacy ISO strings if necessary.
+        cutoff = time.time() - older_than_seconds
         removed = 0
         async with self._lock:
             keys = list(self._tasks.keys())
             for k in keys:
                 try:
                     t = self._tasks[k]
-                    created_ts = datetime.fromisoformat(t["created_at"].rstrip('Z')).timestamp()
+                    # Prefer numeric created_at (new canonical form). If it's a
+                    # string (legacy), attempt to parse; otherwise skip if
+                    # unknown.
+                    created_ts = t.get("created_at")
+                    if isinstance(created_ts, str):
+                        try:
+                            created_ts = datetime.fromisoformat(created_ts.rstrip('Z')).timestamp()
+                        except Exception:
+                            continue
+                    if created_ts is None:
+                        # No usable created_at; skip
+                        continue
                     if created_ts < cutoff:
                         del self._tasks[k]
                         removed += 1
