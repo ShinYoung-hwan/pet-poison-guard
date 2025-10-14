@@ -1,0 +1,57 @@
+name: CI - unit tests (ppg_backend)
+
+on:
+  push:
+    branches: [ main, feat/task_queue ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    name: Run unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.13'
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/ppg_backend/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install dependencies
+        working-directory: ppg_backend
+        run: |
+          python -m pip install --upgrade pip wheel setuptools
+          # Install full requirements. Note: this may take several minutes because
+          # the repository requirements include large packages (torch, torchvision).
+          pip install -r requirements.txt
+
+      - name: Run unit tests
+        working-directory: ppg_backend
+        env:
+          # Ensure Python can import the app package when tests run
+          PYTHONPATH: ${{ github.workspace }}/ppg_backend
+        run: |
+          pytest -q test/unit
+
+      - name: Upload test results (JUnit)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-report
+          path: ppg_backend/.pytest_cache
+
+# Notes:
+# - The workflow installs the full requirements from `ppg_backend/requirements.txt`.
+#   If you prefer a faster CI run, consider adding a `ppg_backend/requirements-ci.txt`
+#   with only test and minimal runtime deps (pytest, fastapi, starlette, pydantic, etc.)
+#   and update the Install dependencies step to use that file.
