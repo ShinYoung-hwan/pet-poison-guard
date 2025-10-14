@@ -1,5 +1,5 @@
 from typing import Any, Dict, Optional
-import task_service
+from . import task_service
 
 # -------------------------
 # Task helper wrappers (Phase A - in-memory)
