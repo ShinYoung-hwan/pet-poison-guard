@@ -1,4 +1,5 @@
 from pydantic import BaseModel, Field
+from typing import Optional
 
 class AnalyzeResult(BaseModel):
     is_safe: bool = Field(..., description="Is the food safe for pets?")
@@ -6,5 +7,8 @@ class AnalyzeResult(BaseModel):
     confidence: float = Field(..., description="Model confidence (0~1)")
     message: str = Field(..., description="Analysis summary message")
 
+class AnalyzeCreateResponse(BaseModel):
+    taskId: str
+
 class AnalyzeResponse(BaseModel):
-    result: AnalyzeResult
+    result: Optional[AnalyzeResult]

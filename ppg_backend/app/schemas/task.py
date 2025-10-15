@@ -5,6 +5,7 @@ from typing import Any, Optional
 class TaskStatus(str, Enum):
     pending = "pending"
     completed = "completed"
+    running = "running"
     failed = "failed"
 
 class TaskCreateResponse(BaseModel):

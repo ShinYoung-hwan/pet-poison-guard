@@ -1,8 +1,9 @@
 import torch.nn as nn
-import torchvision.models as models
+from torchvision.models import resnet50, ResNet50_Weights  # type: ignore
+from typing import Optional
 
 # =============================================================================
-from .utils import load_config_as_namespace
+from ..utils import load_config_as_namespace
 opts = load_config_as_namespace()
 # # =============================================================================
 
@@ -14,8 +15,7 @@ class im2recipe(nn.Module):
     def __init__(self):
         super(im2recipe, self).__init__()
         if opts.preModel=='resNet50':
-        
-            resnet = models.resnet50(weights=True)
+            resnet = resnet50(weights=ResNet50_Weights.DEFAULT)
             modules = list(resnet.children())[:-1]  # we do not use the last fc layer.
             self.visionMLP = nn.Sequential(*modules)
 

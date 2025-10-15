@@ -18,7 +18,8 @@ def on_test_stop(environment, **kwargs):
     seconds = []
     with open(perf_path, "r") as f:
         for i, line in enumerate(f):
-            if i == 2: info = ' '.join(line.strip().split()[-11:])
+            if i <= 2 and "INFO/locust.runners" in line:
+                info = ' '.join(line.strip().split()[-11:])
             if "[Completed]" in line:
                 seconds.append(float(line.strip().split()[-2]))
 
@@ -45,8 +46,8 @@ def on_test_stop(environment, **kwargs):
             print(f"Error processing completion times: {e}")
 
     try:
-        os.remove(perf_path)
-        print(f"{perf_path} removed.")
+        open(perf_path, "w").close()
+        print(f"{perf_path} Cleared.")
     except Exception as e:
         print(f"Error removing {perf_path}: {e}")
 

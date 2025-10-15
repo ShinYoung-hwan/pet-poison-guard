@@ -1,0 +1,64 @@
+name: CI - unit tests (ppg_backend)
+
+on:
+  push:
+    branches: [ main, feat/task_queue ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    name: Run unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          # Use 3.12 for broader binary wheel availability (torch/triton/etc.)
+          python-version: '3.12'
+
+      - name: Cache pip wheelhouse
+        uses: actions/cache@v4
+        with:
+          # Cache the generated wheelhouse to speed subsequent runs
+          path: ppg_backend/.wheels
+          key: ${{ runner.os }}-wheels-${{ hashFiles('**/ppg_backend/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-wheels-
+
+      - name: Build and install dependencies (use wheel cache)
+        working-directory: ppg_backend
+        run: |
+          python -m pip install --upgrade pip wheel setuptools
+          # If we don't have cached wheels, build them into .wheels. This can be slow
+          # the first time, but subsequent runs will restore the cache and be much faster.
+          if [ ! -d .wheels ] || [ -z "$(ls -A .wheels)" ]; then
+            mkdir -p .wheels
+            pip wheel -r requirements.txt -w .wheels || true
+          fi
+          # Install using local wheelhouse first; fall back to PyPI for any missing wheels
+          pip install --no-index --find-links .wheels -r requirements.txt || pip install -r requirements.txt
+
+      - name: Run unit tests
+        working-directory: ppg_backend
+        env:
+          # Ensure Python can import the app package when tests run
+          PYTHONPATH: ${{ github.workspace }}/ppg_backend
+        run: |
+          pytest -q test/unit
+
+      - name: Upload test results (JUnit)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-report
+          path: ppg_backend/.pytest_cache
+
+# Notes:
+# - The workflow installs the full requirements from `ppg_backend/requirements.txt`.
+#   If you prefer a faster CI run, consider adding a `ppg_backend/requirements-ci.txt`
+#   with only test and minimal runtime deps (pytest, fastapi, starlette, pydantic, etc.)
+#   and update the Install dependencies step to use that file.

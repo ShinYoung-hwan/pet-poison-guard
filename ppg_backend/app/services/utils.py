@@ -17,7 +17,7 @@ def load_config_as_namespace(config_path=None):
         if env_path:
             tried_paths.append(env_path)
         # 2. 현재 파일 기준 상대 경로
-        tried_paths.append(os.path.join(os.path.dirname(__file__), 'config.json'))
+        tried_paths.append(os.path.join(os.path.dirname(__file__), 'snapshots/config.json'))
         # 3. 프로젝트 루트 기준
         base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../../../'))
         tried_paths.append(os.path.join(base_dir, 'ppg_backend/app/services/snapshots/config.json'))
@@ -29,3 +29,13 @@ def load_config_as_namespace(config_path=None):
                 config_dict = json.load(f)
             return SimpleNamespace(**config_dict)
     raise FileNotFoundError(f"Config file not found. Tried paths: {tried_paths}")
+
+
+# Application constants derived from config
+def get_max_file_size(config=None) -> int:
+    try:
+        cfg = config or load_config_as_namespace()
+        return int(getattr(cfg, "max_file_size", 5 * 1024 * 1024))
+    except Exception:
+        # Fallback default: 5MB
+        return 5 * 1024 * 1024

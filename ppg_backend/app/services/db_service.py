@@ -4,26 +4,32 @@ from pgvector.sqlalchemy import Vector
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from ..models.db_models import RecipeData, RecEmbed, PetPoison
-from typing import List, Dict, Tuple
+from typing import List, Dict, Tuple, Any
 import time
-import logging
+from fastapi.logger import logger
+from .exceptions import DBServiceError
 
 async def find_top_k_recipes(db: AsyncSession, query_emb, top_k: int = 10) -> List[Tuple[int, float]]:
     t0 = time.time()
 
-    query_vec = cast(query_emb.tolist(), Vector)
-    stmt = (
-        func.cosine_distance(RecEmbed.embedding, query_vec).label("similarity")
-    )
-    q = select(RecEmbed.id, stmt).order_by("similarity").limit(top_k)
-    result = await db.execute(q)
-    rows = result.fetchall()
+    try:
+        query_vec = cast(query_emb.tolist(), Vector)
+        stmt = (
+            func.cosine_distance(RecEmbed.embedding, query_vec).label("similarity")
+        )
+        q = select(RecEmbed.id, stmt).order_by("similarity").limit(top_k)
+        result = await db.execute(q)
+        rows = result.fetchall()
+    except Exception as e:
+        logger.exception("DB query failed in find_top_k_recipes")
+        raise DBServiceError(str(e)) from e
     topk_recipes = [(row.id, 1 - row.similarity) for row in rows]
 
     t = time.time()
-    logging.info(f"Top-{top_k} recipes found on db. (elapsed: {t - t0:.2f}s)")
+    logger.info(f"Top-{top_k} recipes found on db. (elapsed: {t - t0:.2f}s)")
 
     return topk_recipes
+
 
 async def find_poisons_in_recipe(db: AsyncSession, topk_recipes: List[Tuple[int, float]]) -> List[Dict[str, str]]:
     result = []

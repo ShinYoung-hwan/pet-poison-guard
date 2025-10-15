@@ -62,6 +62,8 @@
    ```sh
    locust -f test/performance/locustfile.py \
       --host http://127.0.0.1:8000 \
+      --users 10 \
+      --run-time 60s \
       --logfile=test/performance/performance.txt
    ```
 - 정확도 테스트 실행:
