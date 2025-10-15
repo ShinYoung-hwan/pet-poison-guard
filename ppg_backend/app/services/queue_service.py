@@ -61,6 +61,7 @@ async def process_task_item(task_id: str, file_tuple: Tuple, *,
     except Exception as e:
         # mark failed and save error
         await update_status_fn(task_id, TaskStatus.failed, last_error=str(e))
+        await increment_retries(task_id)
         logger.error(f"AI analyze error for {task_id}: {str(e)}")
     finally:
         # ensure temporary file is removed if it exists
