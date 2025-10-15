@@ -69,6 +69,78 @@ def test_analyze_image_edge_case_min_size(monkeypatch):
     assert "taskId" in resp.json()
     app.dependency_overrides.clear()
 
+
+def test_analyze_enqueue_fallback_domain_errors(monkeypatch):
+    # If enqueue raises AIServiceError or DBServiceError, analyze endpoint should
+    # still return 202 and schedule the run_analysis_task via BackgroundTasks.
+    from app.api.analyze import get_create_task_fn, get_enqueue_fn, get_run_task_fn
+    from app.services.exceptions import AIServiceError, DBServiceError
+
+    async def mock_create_task(input_meta=None):
+        return "fallback-domain-task"
+
+    async def mock_enqueue_raises(task_id, file_tuple):
+        raise AIServiceError("ai failure")
+
+    # Spy for run_task_fn to record calls
+    calls = []
+
+    def spy_run_task(task_id, file_tuple):
+        calls.append((task_id, file_tuple))
+
+    app.dependency_overrides[get_create_task_fn] = lambda: mock_create_task
+    app.dependency_overrides[get_enqueue_fn] = lambda: mock_enqueue_raises
+    app.dependency_overrides[get_run_task_fn] = lambda: spy_run_task
+
+    img_bytes = b"\x89PNG\r\n\x1a\n"
+    resp = client.post("/api/analyze", files={"file": ("test.png", img_bytes, "image/png")})
+    assert resp.status_code == 202
+    # run_task_fn should have been scheduled (BackgroundTasks executes sync functions after response when using TestClient)
+    assert len(calls) == 1
+    assert calls[0][0] == "fallback-domain-task"
+
+    # Now test DBServiceError behaves the same
+    calls.clear()
+
+    async def mock_enqueue_raises_db(task_id, file_tuple):
+        raise DBServiceError("db failure")
+
+    app.dependency_overrides[get_enqueue_fn] = lambda: mock_enqueue_raises_db
+    resp = client.post("/api/analyze", files={"file": ("test2.png", img_bytes, "image/png")})
+    assert resp.status_code == 202
+    assert len(calls) == 1
+    assert calls[0][0] == "fallback-domain-task"
+    app.dependency_overrides.clear()
+
+
+def test_analyze_enqueue_fallback_generic_exception(monkeypatch):
+    # If enqueue raises a generic Exception, analyze endpoint should still
+    # return 202 and schedule the run_analysis_task via BackgroundTasks.
+    from app.api.analyze import get_create_task_fn, get_enqueue_fn, get_run_task_fn
+
+    async def mock_create_task(input_meta=None):
+        return "fallback-generic-task"
+
+    async def mock_enqueue_raises(task_id, file_tuple):
+        raise Exception("unexpected")
+
+    # Spy for run_task_fn
+    calls = []
+
+    def spy_run_task(task_id, file_tuple):
+        calls.append((task_id, file_tuple))
+
+    app.dependency_overrides[get_create_task_fn] = lambda: mock_create_task
+    app.dependency_overrides[get_enqueue_fn] = lambda: mock_enqueue_raises
+    app.dependency_overrides[get_run_task_fn] = lambda: spy_run_task
+
+    img_bytes = b"\x89PNG\r\n\x1a\n"
+    resp = client.post("/api/analyze", files={"file": ("test.png", img_bytes, "image/png")})
+    assert resp.status_code == 202
+    assert len(calls) == 1
+    assert calls[0][0] == "fallback-generic-task"
+    app.dependency_overrides.clear()
+
 # Task Status API
 def test_get_task_status_success(monkeypatch):
     # 완료된 taskId에 대해 /api/task/{task_id}가 status와 data를 올바르게 반환하는지 검증
