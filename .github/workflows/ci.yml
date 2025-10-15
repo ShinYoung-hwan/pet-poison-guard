@@ -20,21 +20,27 @@ jobs:
           # Use 3.12 for broader binary wheel availability (torch/triton/etc.)
           python-version: '3.12'
 
-      - name: Cache pip
+      - name: Cache pip wheelhouse
         uses: actions/cache@v4
         with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/ppg_backend/requirements.txt') }}
+          # Cache the generated wheelhouse to speed subsequent runs
+          path: ppg_backend/.wheels
+          key: ${{ runner.os }}-wheels-${{ hashFiles('**/ppg_backend/requirements.txt') }}
           restore-keys: |
-            ${{ runner.os }}-pip-
+            ${{ runner.os }}-wheels-
 
-      - name: Install dependencies
+      - name: Build and install dependencies (use wheel cache)
         working-directory: ppg_backend
         run: |
           python -m pip install --upgrade pip wheel setuptools
-          # Install full requirements. Note: this may take several minutes because
-          # the repository requirements include large packages (torch, torchvision).
-          pip install -r requirements.txt
+          # If we don't have cached wheels, build them into .wheels. This can be slow
+          # the first time, but subsequent runs will restore the cache and be much faster.
+          if [ ! -d .wheels ] || [ -z "$(ls -A .wheels)" ]; then
+            mkdir -p .wheels
+            pip wheel -r requirements.txt -w .wheels || true
+          fi
+          # Install using local wheelhouse first; fall back to PyPI for any missing wheels
+          pip install --no-index --find-links .wheels -r requirements.txt || pip install -r requirements.txt
 
       - name: Run unit tests
         working-directory: ppg_backend
