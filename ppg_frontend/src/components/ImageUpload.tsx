@@ -37,8 +37,8 @@ const ImageUpload: React.FC<ImageUploadProps> = ({ onTaskId }) => {
       } else {
         setError('서버에서 taskId를 반환하지 않았습니다.');
       }
-    } catch (err: any) {
-      setError('Failed to analyze image.');
+    } catch (err: unknown) {
+      setError(`Failed to analyze image. ${err instanceof Error ? err.message : 'Unknown error'}`);
     } finally {
       setLoading(false);
     }
