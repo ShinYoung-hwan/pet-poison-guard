@@ -1,10 +1,16 @@
-name: CI - unit tests (ppg_backend)
+name: Backend CI - unit tests
 
 on:
   push:
-    branches: [ main, feat/task_queue ]
+    # Trigger on pushes to any branch, but only when files under ppg_backend/ change
+    branches: ['**']
+    paths:
+      - 'ppg_backend/**'
   pull_request:
-    branches: [ main ]
+    # Trigger on PRs targeting main, but only when files under ppg_backend/ change
+    branches: ['main']
+    paths:
+      - 'ppg_backend/**' 
 
 jobs:
   test:
