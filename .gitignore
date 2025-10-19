@@ -38,6 +38,7 @@ ppg_backend/app/services/snapshots/
 !ppg_backend/app/services/snapshots/config.json
 ppg_backend/test/performance/performance.txt
 ppg_backend/test/performance/performance_histogram.png
+ppg_backend/.coverage
 
 # Database
 ppg_database/data/
