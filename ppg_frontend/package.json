@@ -9,6 +9,7 @@
     "test": "jest --passWithNoTests",
     "test:watch": "jest --watch",
     "lint": "eslint .",
+    "coverage": "jest --coverage",
     "type-check": "tsc --noEmit",
     "preview": "vite preview"
   },
