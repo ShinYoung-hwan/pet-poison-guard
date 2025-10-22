@@ -43,5 +43,9 @@ ppg_backend/.coverage
 
 # Database
 ppg_database/data/
+!ppg_database/data/petpoison_data.json
 ppg_database/db_data/
 ppg_database/.gitignore
+
+# etc
+**/nohup.out

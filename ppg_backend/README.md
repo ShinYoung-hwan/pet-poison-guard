@@ -62,7 +62,7 @@
    ```sh
    pytest test/unit
    ```
-   
+
 - 부하 테스트 실행:
    - 먼저 백엔드 서버와 DB 서버를 실행시켜 줍니다.
    ```sh
@@ -75,13 +75,23 @@
    ```
 - 정확도 테스트 실행:
    - 먼저 다음 6가지 파일을 준비해줍니다.
-   1. layer1.json : recipe1M 데이터셋에서 다운로드
-   2. img_embeds.pkl : im2recipe-Pytorch 프로젝트의 test.py 실행
-   3. rec_embeds.pkl : im2recipe-Pytorch 프로젝트의 test.py 실행
-   4. img_ids.pkl : im2recipe-Pytorch 프로젝트의 test.py 실행
-   5. rec_ids.pkl : im2recipe-Pytorch 프로젝트의 test.py 실행
+   1. layer1.json : [Recipe1M+ 데이터셋 접근 신청](https://forms.gle/EzYSu8j3D1LJzVbR8) 후 다운로드
+   2. img_embeds.pkl : [im2recipe-Pytorch](https://github.com/torralba-lab/im2recipe-Pytorch) 프로젝트의 test.py 실행
+   3. rec_embeds.pkl : 위와 동일
+   4. img_ids.pkl : 위와 동일
+   5. rec_ids.pkl : 위와 동일
    6. petpoison_data.json : 자체 제작한 반려동물 위해 식품 db
    - 파일들이 준비가 완료되면 다음 명령어로 benchmark 계산을 실행합니다.
    ```sh
+   # Pre-defined path : 'ppg_database/data'
    python test/benchmark/benchmark.py
+
+   # Custom path
+   python test/benchmark/benchmark.py \
+      --img-embeds /path/to/img_embeds.pkl \
+      --rec-embeds /path/to/rec_embeds.pkl \
+      --img-ids /path/to/img_ids.pkl \
+      --rec-ids /path/to/rec_ids.pkl \
+      --petpoison /path/to/petpoison_data.json \
+      --layer1 /path/to/layer1.json
    ```
