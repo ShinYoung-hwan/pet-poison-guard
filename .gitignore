@@ -31,6 +31,7 @@ ppg_frontend/coverage/
 **/__pycache__
 **/.venv
 **/.pytest_cache
+**/.ruff_cache
 *.tar
 *.pkl
 ppg_backend/app/services/snapshots/
