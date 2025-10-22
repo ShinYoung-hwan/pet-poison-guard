@@ -48,6 +48,12 @@ jobs:
           # Install using local wheelhouse first; fall back to PyPI for any missing wheels
           pip install --no-index --find-links .wheels -r requirements.txt || pip install -r requirements.txt
 
+      - name: Run ruff linter
+        working-directory: ppg_backend
+        run: |
+          # Lint the backend app; fail the job on lint errors
+          ruff check app/
+
       - name: Run unit tests
         working-directory: ppg_backend
         env:
