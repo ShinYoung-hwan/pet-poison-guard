@@ -1,4 +1,4 @@
-from typing import Tuple, List, Dict, Optional, Callable
+from typing import Tuple, List, Dict, Optional, Callable, Any
 import asyncio
 import os
 from fastapi.logger import logger
@@ -27,10 +27,16 @@ class QueueManager:
     def ensure(self) -> asyncio.Queue:
         return self._queue
 
-    async def enqueue(self, task_id: str, file_tuple: Tuple) -> None:
+    async def enqueue(self, task_id: str, file_tuple: Tuple[str, str, str]) -> None:
+        """Put a task into the in-memory queue.
+
+        Args:
+            task_id: Task identifier.
+            file_tuple: Expected (tmp_path, filename, content_type).
+        """
         await self._queue.put((task_id, file_tuple))
 
-    async def get(self):
+    async def get(self) -> Tuple[str, str, str]:
         return await self._queue.get()
 
 
@@ -44,12 +50,24 @@ def get_default_queue_manager() -> QueueManager:
     return _default_queue_manager
 
 
-async def process_task_item(task_id: str, file_tuple: Tuple, *,
-                            request_ai_fn: Optional[Callable] = None,
-                            save_fn: Optional[Callable] = None,
-                            update_status_fn: Optional[Callable] = None):
-    """Process one queued task (file_tuple is expected to be (tmp_path, filename, content_type))."""
-    tmp_path = None
+async def process_task_item(
+    task_id: str,
+    file_tuple: Tuple[str, str, str],
+    *,
+    request_ai_fn: Optional[Callable[..., Any]] = None,
+    save_fn: Optional[Callable[..., Any]] = None,
+    update_status_fn: Optional[Callable[..., Any]] = None,
+) -> None:
+    """Process one queued task.
+
+    Args:
+        task_id: Task identifier.
+        file_tuple: Expected tuple (tmp_path, filename, content_type).
+        request_ai_fn: Optional override for AI request function.
+        save_fn: Optional override for result save function.
+        update_status_fn: Optional override for status update function.
+    """
+    tmp_path: Optional[str] = None
     request_ai_fn = request_ai_fn or request_ai_analysis
     save_fn = save_fn or save_task_result
     update_status_fn = update_status_fn or update_task_status
@@ -57,22 +75,26 @@ async def process_task_item(task_id: str, file_tuple: Tuple, *,
         tmp_path, filename, content_type = file_tuple
         ai_result = await request_ai_fn(tmp_path, timeout=15.0, top_k=10)
         await save_fn(task_id, ai_result)
-        logger.info(f"AI analysis complete for {task_id}")
-    except Exception as e:
-        # mark failed and save error
-        await update_status_fn(task_id, TaskStatus.failed, last_error=str(e))
-        await increment_retries(task_id)
-        logger.error(f"AI analyze error for {task_id}: {str(e)}")
+        logger.info("AI analysis complete for %s", task_id)
+    except Exception as e:  # capture any runtime error and persist status
+        err_str = str(e)
+        try:
+            await update_status_fn(task_id, TaskStatus.failed, last_error=err_str)
+            await increment_retries(task_id)
+        except Exception:
+            logger.exception("Failed to update task status for %s", task_id)
+        logger.error("AI analyze error for %s: %s", task_id, err_str)
     finally:
         # ensure temporary file is removed if it exists
-        try:
-            if tmp_path and os.path.exists(tmp_path):
-                os.unlink(tmp_path)
-        except Exception:
-            logger.warning(f"Failed to remove temp file {tmp_path}")
+        if tmp_path:
+            try:
+                if os.path.exists(tmp_path):
+                    os.unlink(tmp_path)
+            except Exception:
+                logger.warning("Failed to remove temp file %s", tmp_path)
 
 
-async def run_analysis_task(task_id: str, file_tuple):
+async def run_analysis_task(task_id: str, file_tuple: Tuple[str, str, str]):
     """Compatibility wrapper: process immediately (used by BackgroundTasks or tests).
 
     Prefer using `enqueue(task_id, file_tuple)` so work is handled by worker pool.
@@ -83,12 +105,18 @@ async def run_analysis_task(task_id: str, file_tuple):
 # Global semaphore for request_ai_analysis
 _request_ai_analysis_semaphore: Optional[asyncio.Semaphore] = None
 
-async def request_ai_analysis(tmp_path: str, timeout: float = 15.0, top_k: int = 10) -> List[Dict[str, str]]:
-    """
-    tmp_path: path to the image file on disk
-    Returns: list of dicts [{"name": ..., "image": ..., "description": ...}], sorted by similarity descending
+async def request_ai_analysis(
+    tmp_path: str,
+    timeout: float = 15.0,
+    top_k: int = 10,
+) -> List[Dict[str, str]]:
+    """Run the AI analysis pipeline for a single image file.
+
+    The function serializes calls to the computation-bound embedding extraction using a
+    module-level semaphore to avoid contention.
     """
     # Semaphore ensures image_to_embedding is run serially to avoid heavy CPU contention
+    # TODO : check compatible to GPU environments 
     global _request_ai_analysis_semaphore
     if _request_ai_analysis_semaphore is None:
         _request_ai_analysis_semaphore = asyncio.Semaphore(1)
