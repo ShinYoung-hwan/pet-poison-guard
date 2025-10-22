@@ -1,11 +1,9 @@
+from fastapi.logger import logger
 import json
-import logging
 import os
 from types import SimpleNamespace
 from typing import Optional, List
 from pathlib import Path
-
-logger = logging.getLogger(__name__)
 
 def load_config_as_namespace(config_path: Optional[str] = None) -> SimpleNamespace:
     """Locate and load a JSON config file into a SimpleNamespace.
