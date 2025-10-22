@@ -1,6 +1,5 @@
 import torch.nn as nn
-from torchvision.models import resnet50, ResNet50_Weights  # type: ignore
-from typing import Optional
+from torchvision.models import resnet50, ResNet50_Weights
 
 # =============================================================================
 from ..utils import load_config_as_namespace

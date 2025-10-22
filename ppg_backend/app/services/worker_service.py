@@ -1,5 +1,5 @@
 import asyncio
-from typing import List, Optional, Tuple, Callable
+from typing import List, Optional, Callable
 
 from .queue_service import QueueManager
 from .queue_service import get_default_queue_manager, process_task_item

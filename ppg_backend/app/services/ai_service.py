@@ -1,4 +1,3 @@
-import os
 import time
 import asyncio
 from .utils import load_config_as_namespace
@@ -11,7 +10,6 @@ from typing import Union
 from fastapi.logger import logger
 from .exceptions import AIServiceError
 
-import time
 from PIL import Image
 import torchvision.transforms as transforms
 

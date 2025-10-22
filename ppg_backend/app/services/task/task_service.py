@@ -17,8 +17,8 @@ implements the same async interface.
 import asyncio
 import time
 import uuid
-from typing import Dict, Any, Optional, Tuple
-from datetime import datetime, timezone
+from typing import Dict, Any, Optional
+from datetime import datetime
 from app.schemas.task import TaskStatus
 
 

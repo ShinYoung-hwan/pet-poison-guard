@@ -6,7 +6,7 @@ from pgvector.sqlalchemy import Vector
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from ..models.db_models import RecipeData, RecEmbed, PetPoison
-from typing import List, Dict, Tuple, Any
+from typing import List, Dict, Tuple
 import time
 from fastapi.logger import logger
 from .exceptions import DBServiceError
