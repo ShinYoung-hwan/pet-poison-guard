@@ -39,7 +39,7 @@ docker run -d --name ppg_database \
 	-e POSTGRES_PASSWORD=mysecretpassword \
 	-e TZ=Asia/Seoul \
 	-p 5432:5432 \
-	-v ppg_db_data:/var/lib/postgresql/data \
+	-v db_data:/var/lib/postgresql/data \
 	ppg_database
 ```
 

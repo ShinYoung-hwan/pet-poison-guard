@@ -23,8 +23,7 @@
 1) data 준비
 
     - layer1.json : Recipe1M+ 데이터셋에서 다운로드 한다. (데이터베이스 공개 정책에 따라서 [Recipe1m+ Dataset Access](https://forms.gle/EzYSu8j3D1LJzVbR8)에서 신청해야만 한다.)
-    - rec_ids.pkl : [im2recipe-Pytorch](https://github.com/torralba-lab/im2recipe-Pytorch) 프로젝트의 test.py를 실행시켜서 생성한다.
-    - rec_embeds.pkl : 위 rec_ids.pkl와 함께 생성된다.
+    - rec_ids.pkl, rec_embeds.pkl : [im2recipe-Pytorch](https://github.com/torralba-lab/im2recipe-Pytorch) 프로젝트의 test.py를 실행시켜서 생성한다.
     - petpoison_data.json : 위험 식품 데이터 셋을 자체적으로 생성한다. (기본적으로는 [Pet Poison Helpline](https://www.petpoisonhelpline.com/)의 데이터베이스를 따른다.)
 
 
@@ -63,7 +62,7 @@ docker run -d --name ppg_database \
 # 기존 볼륨을 제거하고 컨테이너와 볼륨을 재생성하는 예시다.
 docker rm -f ppg_database || true
 docker volume rm db_data || true
-docker run -d --name ppg_database -e POSTGRES_PASSWORD=mysecretpassword -p 5432:5432 -v ppg_db_data:/var/lib/postgresql/data ppg_database
+docker run -d --name ppg_database -e POSTGRES_PASSWORD=mysecretpassword -p 5432:5432 -v db_data:/var/lib/postgresql/data ppg_database
 ```
 
 ## 로그 확인 및 진행 상태 확인 방법
