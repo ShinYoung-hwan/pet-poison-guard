@@ -3,8 +3,10 @@ import time
 import logging
 import matplotlib.pyplot as plt
 from locust import HttpUser, task, between, events
+from math import ceil
 
 def on_test_stop(environment, **kwargs):
+
     perf_path = "test/performance/performance.txt"
     hist_path = "test/performance/performance_histogram.png"
 
@@ -29,17 +31,44 @@ def on_test_stop(environment, **kwargs):
         try:
             avg = sum(seconds) / len(seconds)
             std = (sum((x - avg) ** 2 for x in seconds) / len(seconds)) ** 0.5
+
+            # percentiles (95th and 99th) using simple rank method
+            sorted_seconds = sorted(seconds)
+            n = len(sorted_seconds)
+
+            def percentile(sorted_list, pct):
+                # rank-based percentile: ceil(pct/100 * n) - 1, clamped
+                idx = max(0, min(n - 1, ceil((pct / 100.0) * n) - 1))
+                return sorted_list[idx]
+
+            p95 = percentile(sorted_seconds, 95)
+            p99 = percentile(sorted_seconds, 99)
+
+            min_val = sorted_seconds[0]
+            max_val = sorted_seconds[-1]
+
+            print(f"Min time for completed tasks: {min_val:.2f} seconds")
+            print(f"Max time for completed tasks: {max_val:.2f} seconds")
             print(f"Average time for completed tasks: {avg:.2f} seconds")
+            print(f"Std deviation: {std:.2f} seconds")
+            print(f"95th percentile: {p95:.2f} seconds")
+            print(f"99th percentile: {p99:.2f} seconds")
 
             plt.figure(figsize=(8, 4))
             plt.hist(seconds, bins=20, color="skyblue", edgecolor="black")
-            plt.title(f"Distribution of Completion Times of {len(seconds)} requests ~ N({avg:.2f}, {std:.2f})\n{info}")
+            plt.title(
+                f"Distribution of Completion Times of {len(seconds)} requests ~ N({avg:.2f}, {std:.2f})\n{info}"
+            )
             plt.xlabel("Time (seconds)")
             plt.ylabel("Frequency")
-            plt.tight_layout()
-            # 평균값 세로선 추가
+            # 평균값 및 percentiles 세로선 추가
             plt.axvline(avg, color="red", linestyle="dashed", linewidth=2, label=f"Average: {avg:.2f}s")
+            plt.axvline(p95, color="green", linestyle="dashed", linewidth=2, label=f"95th: {p95:.2f}s")
+            plt.axvline(p99, color="purple", linestyle="dotted", linewidth=2, label=f"99th: {p99:.2f}s")
+            plt.axvline(min_val, color="orange", linestyle="solid", linewidth=1.5, label=f"Min: {min_val:.2f}s")
+            plt.axvline(max_val, color="yellow", linestyle="solid", linewidth=1.5, label=f"Max: {max_val:.2f}s")
             plt.legend()
+            plt.tight_layout()
             plt.savefig(hist_path)
             print(f"Histogram saved to {hist_path}")
         except Exception as e:

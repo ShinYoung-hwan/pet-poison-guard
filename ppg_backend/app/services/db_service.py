@@ -1,10 +1,12 @@
-from sqlalchemy import func, cast
+from sqlalchemy import cast
+from sqlalchemy import bindparam
+from sqlalchemy import Float
 from pgvector.sqlalchemy import Vector
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from ..models.db_models import RecipeData, RecEmbed, PetPoison
-from typing import List, Dict, Tuple, Any
+from typing import List, Dict, Tuple
 import time
 from fastapi.logger import logger
 from .exceptions import DBServiceError
@@ -13,17 +15,26 @@ async def find_top_k_recipes(db: AsyncSession, query_emb, top_k: int = 10) -> Li
     t0 = time.time()
 
     try:
-        query_vec = cast(query_emb.tolist(), Vector)
-        stmt = (
-            func.cosine_distance(RecEmbed.embedding, query_vec).label("similarity")
-        )
-        q = select(RecEmbed.id, stmt).order_by("similarity").limit(top_k)
-        result = await db.execute(q)
+        # Bind the query vector as a parameter of pgvector Vector type so the
+        # driver/SQLAlchemy knows how to serialize it. Use core table columns
+        # (RecEmbed.__table__.c) to avoid ORM column processors trying to
+        # coerce the wrong result column into a Vector.
+        qvec_param = bindparam("qvec", type_=Vector)
+
+        id_col = RecEmbed.__table__.c.id
+        emb_col = RecEmbed.__table__.c.embedding
+        # ensure SQLAlchemy knows this expression is a numeric distance (Float)
+        stmt = cast(emb_col.op('<=>')(qvec_param), Float).label("distance")
+
+        q = select(id_col, stmt).order_by(stmt).limit(top_k)
+        # pass the python list (or vector) as the parameter value; the pgvector
+        # SQLAlchemy type will handle serialization
+        result = await db.execute(q, {"qvec": query_emb.tolist()})
         rows = result.fetchall()
     except Exception as e:
         logger.exception("DB query failed in find_top_k_recipes")
         raise DBServiceError(str(e)) from e
-    topk_recipes = [(row.id, 1 - row.similarity) for row in rows]
+    topk_recipes = [(row.id, 1 - row.distance) for row in rows]
 
     t = time.time()
     logger.info(f"Top-{top_k} recipes found on db. (elapsed: {t - t0:.2f}s)")

@@ -1,10 +1,16 @@
-name: CI - unit tests (ppg_backend)
+name: Backend CI - unit tests
 
 on:
   push:
-    branches: [ main, feat/task_queue ]
+    # Trigger on pushes to any branch, but only when files under ppg_backend/ change
+    branches: ['**']
+    paths:
+      - 'ppg_backend/**'
   pull_request:
-    branches: [ main ]
+    # Trigger on PRs targeting main, but only when files under ppg_backend/ change
+    branches: ['main']
+    paths:
+      - 'ppg_backend/**' 
 
 jobs:
   test:
@@ -41,6 +47,12 @@ jobs:
           fi
           # Install using local wheelhouse first; fall back to PyPI for any missing wheels
           pip install --no-index --find-links .wheels -r requirements.txt || pip install -r requirements.txt
+
+      - name: Run ruff linter
+        working-directory: ppg_backend
+        run: |
+          # Lint the backend app; fail the job on lint errors
+          ruff check app/
 
       - name: Run unit tests
         working-directory: ppg_backend

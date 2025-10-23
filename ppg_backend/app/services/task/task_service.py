@@ -17,10 +17,10 @@ implements the same async interface.
 import asyncio
 import time
 import uuid
-from typing import Dict, Any, Optional, Tuple
-from datetime import datetime, timezone
+from typing import Dict, Any, Optional
+from datetime import datetime
 from app.schemas.task import TaskStatus
-
+from fastapi.logger import logger
 
 class InMemoryTaskStore:
     """An async-safe in-memory task store implementing the expected task service interface.
@@ -50,6 +50,8 @@ class InMemoryTaskStore:
             >>> await store.create_task({"filename": "a.png"})
             'b7a9f2f0-...'
         """
+        if input_meta is not None and not isinstance(input_meta, dict):
+            raise TypeError("input_meta must be a dict or None")
         task_id = str(uuid.uuid4())
         # Store a single numeric epoch timestamp (seconds, float) as the
         # canonical value for created_at/updated_at. This avoids fragile
@@ -114,6 +116,12 @@ class InMemoryTaskStore:
         """
         if not isinstance(task_id, str):
             raise TypeError("task_id must be a string")
+        # Allow callers to pass a string status; coerce to TaskStatus when possible
+        if not isinstance(status, TaskStatus):
+            try:
+                status = TaskStatus(status)  # type: ignore[arg-type]
+            except Exception:
+                raise TypeError("status must be a TaskStatus or valid TaskStatus value")
         # Update the canonical numeric timestamp
         now_ts = time.time()
         async with self._lock:
@@ -203,7 +211,8 @@ class InMemoryTaskStore:
                     if created_ts < cutoff:
                         del self._tasks[k]
                         removed += 1
-                except Exception:
+                except Exception as exc:
+                    logger.debug("Skipping task %s during cleanup due to error: %s", k, exc)
                     continue
         return removed
 

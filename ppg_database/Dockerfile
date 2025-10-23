@@ -32,6 +32,7 @@ COPY ./load_tables.py /app/
 COPY ./10_create_tables.sql /docker-entrypoint-initdb.d/
 COPY ./20_load_tables.sh /docker-entrypoint-initdb.d/
 COPY ./30_init_config.sh /docker-entrypoint-initdb.d/
+COPY ./40_create_indexes.sql /docker-entrypoint-initdb.d/
 
 # --- 네트워크 설정 ---
 # 컨테이너 외부에서 5432 포트로 접속할 수 있도록 설정합니다.
