@@ -3,7 +3,7 @@ import time
 import logging
 import matplotlib.pyplot as plt
 from locust import HttpUser, task, between, events
-import math
+from math import ceil
 
 def on_test_stop(environment, **kwargs):
 
@@ -38,7 +38,7 @@ def on_test_stop(environment, **kwargs):
 
             def percentile(sorted_list, pct):
                 # rank-based percentile: ceil(pct/100 * n) - 1, clamped
-                idx = max(0, min(n - 1, math.ceil((pct / 100.0) * n) - 1))
+                idx = max(0, min(n - 1, ceil((pct / 100.0) * n) - 1))
                 return sorted_list[idx]
 
             p95 = percentile(sorted_seconds, 95)
