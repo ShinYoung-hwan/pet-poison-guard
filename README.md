@@ -104,39 +104,49 @@ docker compose up
 
 <!-- 프로젝트 구조 및 데이터 흐름 다이어그램 -->
 ```mermaid
-flowchart TD
-    subgraph 사용자["사용자 영역"]
-        User["👨‍💻 사용자"]
-    end
+---
+config:
+  layout: elk
+---
+flowchart TB
+ subgraph User["User (Browser / Mobile)"]
+        U["End User"]
+  end
+ subgraph FE_Container["Frontend — ppg_frontend"]
+        FE["React + Vite<br>Port: 8080"]
+  end
+ subgraph BE_Container["Backend — ppg_backend"]
+        BE["FastAPI + Uvicorn<br>Port: 8000"]
+        Q["Task Queue"]
+        AI["PyTorch model server<br>(embeddings, inference)"]
+  end
+ subgraph DB_Container["Database — ppg_database"]
+        DB["PostgreSQL + pgvector<br>Port: 5432"]
+  end
+ subgraph Infra["Service Infrastructure (local / cloud)"]
+        FE_Container
+        BE_Container
+        DB_Container
+        infra["Docker Compose"]
+  end
+    infra -- Docker / NGINX --> FE_Container
+    infra -- Docker --> BE_Container
+    infra -- Docker Volume --> DB_Container
+    U -- Use UI --> FE
+    FE -- HTTP REST API --> BE
+    BE -- SQL / ORM --> DB
+    DB -- POison List --> BE
+    BE -- Async via Queue --> AI
+    BE -- Enqueue tasks --> Q
+    Q -- Deliver jobs --> AI
+    AI -- Return results --> BE
+    BE -- API responses / status updates --> FE
+     FE_Container:::container
+     BE_Container:::container
+     DB_Container:::container
+    classDef container fill:#f5f7ff,stroke:#333,stroke-width:1px
+    click FE_Container "ppg_frontend/README.md"
+    click BE_Container "ppg_backend/README.md"
+    click DB_Container "ppg_database/README.md"
 
-    subgraph Infra["서비스 인프라 (로컬/클라우드 환경)"]
-        FE["📱 Frontend<br>React 모바일/웹 앱"]
-        BE["⚙️ Backend<br>FastAPI REST API"]
-        Queue["📨 Task Queue<br>(비동기 작업 관리)"]
-        AI["🤖 AI Server<br>PyTorch 이미지 분석"]
-    end
-
-    %% 데이터 흐름
-    User -- "앱 사용 (모바일/데스크탑)" --> FE
-    FE -- "이미지 업로드/분석 요청 (HTTP/JSON)" --> BE
-    BE -- "분석 결과/상태 반환 (JSON)" --> FE
-
-    BE -- "이미지 분석 작업 등록" --> Queue
-    Queue -- "작업 전달 (FIFO)" --> AI
-    AI -- "분석 결과 반환" --> Queue
-    Queue -- "결과 저장/상태 갱신" --> BE
-
-    subgraph Logic["내부 처리 로직"]
-        BE_Logic["Backend Logic<br>(유효성 검사, DB, 인증, API)"]
-        AI_Logic["AI Logic<br>(모델 추론, 임베딩, 위험 식품 판별)"]
-        BE --- BE_Logic
-        AI --- AI_Logic
-    end
-
-    %% 스타일링
-    style User fill:#d4e4ff,stroke:#333,stroke-width:2px
-    style FE fill:#c1f0f0,stroke:#333,stroke-width:2px
-    style BE fill:#f9d5e5,stroke:#333,stroke-width:2px
-    style Queue fill:#fdebd0,stroke:#333,stroke-width:2px
-    style AI fill:#e8dff5,stroke:#333,stroke-width:2px
 ```
