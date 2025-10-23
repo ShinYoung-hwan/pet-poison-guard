@@ -73,7 +73,6 @@ class InMemoryTaskStore:
             }
         return task_id
 
-
     async def get_task(self, task_id: str) -> Optional[Dict[str, Any]]:
         """Return a shallow copy of the task dict or None if not found.
 
