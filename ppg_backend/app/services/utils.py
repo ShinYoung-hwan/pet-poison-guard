@@ -68,7 +68,6 @@ def get_max_file_size(config: Optional[SimpleNamespace] = None) -> int:
 
     DEFAULT = 5 * 1024 * 1024
 
-    # Load config 
     if config is None:
         try:
             cfg = load_config_as_namespace()
