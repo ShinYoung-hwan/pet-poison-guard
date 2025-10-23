@@ -20,11 +20,13 @@ if (!window.matchMedia) {
 }
 
 // TextEncoder/TextDecoder polyfill for Jest/node environment
-declare var global: any;
-
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const _util = require('util');
-if (typeof global.TextEncoder === 'undefined') {
-  global.TextEncoder = _util.TextEncoder;
-  global.TextDecoder = _util.TextDecoder;
+if (typeof globalThis.TextEncoder === 'undefined') {
+  // In Jest/node env use the util exports as polyfill
+  // Assign on globalThis to support both browser-like and node-like globals
+  // @ts-ignore - runtime assignment of globals declared in src/global.d.ts
+  globalThis.TextEncoder = _util.TextEncoder;
+  // @ts-ignore - runtime assignment of globals declared in src/global.d.ts
+  globalThis.TextDecoder = _util.TextDecoder;
 }
