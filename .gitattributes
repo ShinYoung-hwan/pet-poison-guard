@@ -1,0 +1,2 @@
+ppg_database/data/*.pkl filter=lfs diff=lfs merge=lfs -text
+ppg_database/data/petpoison_data.json filter=lfs diff=lfs merge=lfs -text
