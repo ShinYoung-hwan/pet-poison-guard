@@ -53,8 +53,8 @@ git clone https://github.com/ShinYoung-hwan/pet-poison-guard.git
   - rec_ids.pkl, rec_embeds.pkl
   - petpoison_data.json
   - [Recipe1M+](https://forms.gle/EzYSu8j3D1LJzVbR8)에서 데이터셋 접근 신청을 한 후 layer1.json을 다운로드 받는다.
-  - rec_ids.pkl, rec_embeds.pkl, petpoison_data.json은 git-lfs로 관리되고 있다. (pkl 파일들은 [`im2recipe-Pytorch`](https://github.com/torralba-lab/im2recipe-Pytorch?tab=readme-ov-file#pretrained-model)의 test.py를 실행시켜 생성할 수 있다.)
-
+  - rec_ids.pkl, rec_embeds.pkl, petpoison_data.json 파일은 기본적으로 git-lfs로 제공되므로, 저장소를 git-lfs로 클론하면 자동으로 다운로드됩니다.
+  - 일반적으로 별도의 작업 없이 이 파일들을 사용할 수 있습니다. 다만, 커스텀 데이터나 모델을 사용하거나 파일이 누락된 경우에는 [`im2recipe-Pytorch`](https://github.com/torralba-lab/im2recipe-Pytorch?tab=readme-ov-file#pretrained-model)의 test.py를 실행하여 rec_ids.pkl, rec_embeds.pkl 파일을 직접 생성할 수 있습니다.
   - DB 데이터 파일은 [`ppg_database/data`](ppg_database/data) 디렉토리에 위치시킨다.
 
 ### 3. Docker Compose
