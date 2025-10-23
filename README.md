@@ -30,27 +30,32 @@ Pet Poison Guard는 반려동물에게 위험할 수 있는 음식 이미지를 
 
 ## 3. 설치 방법 (Installation Guide) ⚙️
 
+### 0. Git LFS 다운로드
+```sh
+sudo apt install git-lfs
+```
+
 ### 1. 저장소 클론
 ```sh
 git clone https://github.com/ShinYoung-hwan/pet-poison-guard.git
 ```
 
-### 2. 데이터베이스 및 모델 파일 준비
-- AI 모델은 [`ppg_backend/app/services/snapshots/`](ppg_backend/app/services/snapshots/)에 위치해야 합니다. 또한, [`ppg_backend/app/services/snapshots/config.json`](ppg_backend/app/services/snapshots/config.json) 파일의 `model_path`를 업데이트해줍니다.
-- DB 데이터 파일은 [`ppg_database/data`](ppg_database/data) 디렉토리에 위치시킵니다. 데이터는 [im2recipe-Pytorch](https://github.com/torralba-lab/im2recipe-Pytorch)에서 다운로드 url을 신청할 수 있습니다.
-- Pet poison 데이터는 직접 제작해야 하며, 아래 구조를 참고하세요:
-```json
-[
-    {
-        "id": SERIAL PRIMARY KEY,
-        "name": TEXT,
-        "alternate_names": TEXT[],
-        "poison_description": TEXT,
-        "desktop_thumb": TEXT
-    },
-    ...
-]
-```
+### 2. AI 모델 파일 및 데이터베이스 파일 준비
+* AI 모델 파일
+  - [im2recipe-Pytorch](https://github.com/torralba-lab/im2recipe-Pytorch)에서 pretrained 모델을 다운로드 받습니다.
+  - AI 모델은 [`ppg_backend/app/services/snapshots/`](ppg_backend/app/services/snapshots/)에 위치해야 합니다. 
+  - [`ppg_backend/app/services/snapshots/config.json`](ppg_backend/app/services/snapshots/config.json) 파일의 `model_path`를 업데이트해줍니다.
+
+* 데이터베이스 파일
+  ```sh
+  - layer1.json
+  - rec_ids.pkl, rec_embeds.pkl
+  - petpoison_data.json
+  ```
+  - [Recipe1M+](https://forms.gle/EzYSu8j3D1LJzVbR8)에서 데이터셋 접근 신청을 한 후 layer1.json을 다운로드 받는다.
+  - rec_ids.pkl, rec_embeds.pkl, petpoison_data.json은 git-lfs로 관리되고 있다. (pkl 파일들은 [`im2recipe-Pytorch`](https://github.com/torralba-lab/im2recipe-Pytorch?tab=readme-ov-file#pretrained-model)의 test.py를 실행시켜 생성할 수 있다.)
+
+  - DB 데이터 파일은 [`ppg_database/data`](ppg_database/data) 디렉토리에 위치시킨다.
 
 ### 3. Docker Compose
 
