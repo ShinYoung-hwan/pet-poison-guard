@@ -49,11 +49,9 @@ git clone https://github.com/ShinYoung-hwan/pet-poison-guard.git
   - [`ppg_backend/app/services/snapshots/config.json`](ppg_backend/app/services/snapshots/config.json) 파일의 `model_path`를 업데이트해줍니다.
 
 * 데이터베이스 파일
-  ```sh
   - layer1.json
   - rec_ids.pkl, rec_embeds.pkl
   - petpoison_data.json
-  ```
   - [Recipe1M+](https://forms.gle/EzYSu8j3D1LJzVbR8)에서 데이터셋 접근 신청을 한 후 layer1.json을 다운로드 받는다.
   - rec_ids.pkl, rec_embeds.pkl, petpoison_data.json은 git-lfs로 관리되고 있다. (pkl 파일들은 [`im2recipe-Pytorch`](https://github.com/torralba-lab/im2recipe-Pytorch?tab=readme-ov-file#pretrained-model)의 test.py를 실행시켜 생성할 수 있다.)
 
