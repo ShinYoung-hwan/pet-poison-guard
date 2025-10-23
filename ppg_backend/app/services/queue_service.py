@@ -116,7 +116,16 @@ async def request_ai_analysis(
     module-level semaphore to avoid contention.
     """
     # Semaphore ensures image_to_embedding is run serially to avoid heavy CPU contention
-    # TODO : check compatible to GPU environments 
+    # TODO: Verify that using a global semaphore and run_in_executor for image_to_embedding
+    # is appropriate when model inference runs on GPU. Things to check and consider:
+    # - Ensure proper concurrency control given GPU memory limits and model thread-safety.
+    # - Make the semaphore's concurrency limit configurable (e.g. via env var) rather than hard-coded.
+    # - Evaluate whether a process-based executor or a dedicated model worker/process (or model server)
+    #   is preferable for GPU inference to avoid multithreaded CUDA issues.
+    # - Confirm the model is loaded on the intended device and use torch.inference_mode()/no_grad()
+    #   and proper device/context management during inference.
+    # - If continuing to use run_in_executor, test PyTorch/CUDA behavior in multithreaded contexts
+    #   and switch to multiprocessing or an external inference service if necessary.
     global _request_ai_analysis_semaphore
     if _request_ai_analysis_semaphore is None:
         _request_ai_analysis_semaphore = asyncio.Semaphore(1)
